@@ -10,10 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-public final class EventBus
+public class EventBus
 {
-    private final int THREAD_POOL_SIZE = Environment.availableProcessors();
-
     private final ScheduledThreadPoolExecutor threadPool;
     private final Map<Class<? extends IEvent>, List<AbstractEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
@@ -21,7 +19,7 @@ public final class EventBus
 
     public EventBus()
     {
-        this.threadPool = new DefaultThreadPool(THREAD_POOL_SIZE, getClass().getSimpleName());
+        this.threadPool = new DefaultThreadPool(this.getThreadPoolSize(), getClass().getSimpleName());
         this.eventListenerStore = new ConcurrentHashMap<>();
         this.eventQueueStore = new ConcurrentHashMap<>();
         this.eventPropagator = new EventPropagator();
@@ -49,9 +47,14 @@ public final class EventBus
 
     public void publishEvent(IEvent event)
     {
+        this.publishEvent(event, false);
+    }
+
+    public void publishEvent(IEvent event, boolean requiresPropagation)
+    {
         final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
 
-        if (eventListeners.isEmpty())
+        if (requiresPropagation && eventListeners.isEmpty())
         {
             throw new IllegalArgumentException(String.format("No event listener found for event %s. Did you register it?", event.getClass()));
         }
@@ -60,6 +63,11 @@ public final class EventBus
         eventQueue.add(event);
 
         eventQueueStore.put(event.getClass(), eventQueue);
+    }
+
+    public int getThreadPoolSize()
+    {
+        return Environment.availableProcessors();
     }
 
     private class EventPropagator implements Runnable

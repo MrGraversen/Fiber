@@ -16,6 +16,15 @@ public abstract class AbstractNetworkingServer
         this.serverConfig = serverConfig;
         this.networkClientManager = networkClientManager;
         this.eventBus = eventBus;
+
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable()
+        {
+            public void run()
+            {
+                System.out.println(String.format("JVM Shutdown Hook - %s", getClass().getSimpleName()));
+                stop(new RuntimeException("Server Closing"), true);
+            }
+        }));
     }
 
     public AbstractNetworkClientManager getNetworkClientManager()

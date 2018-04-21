@@ -2,8 +2,6 @@ package io.graversen.fiber.event;
 
 import io.graversen.fiber.server.base.AbstractNetworkingServer;
 
-import java.util.Arrays;
-
 public class ServerReadyEvent extends BaseEvent implements IEvent
 {
     private final AbstractNetworkingServer abstractNetworkingServer;

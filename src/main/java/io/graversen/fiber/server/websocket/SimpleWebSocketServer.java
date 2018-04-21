@@ -1,6 +1,6 @@
 package io.graversen.fiber.server.websocket;
 
-import io.graversen.fiber.config.ServerConfig;
+import io.graversen.fiber.config.base.ServerConfig;
 import io.graversen.fiber.event.EventBus;
 import io.graversen.fiber.server.management.AbstractNetworkClientManager;
 import io.graversen.fiber.server.websocket.base.AbstractWebSocketServer;

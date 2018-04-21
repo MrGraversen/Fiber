@@ -1,4 +1,6 @@
-package io.graversen.fiber.config;
+package io.graversen.fiber.config.base;
+
+import io.graversen.fiber.config.base.ServerConfig;
 
 public final class AllNetworkInterfacesServerConfig extends ServerConfig
 {

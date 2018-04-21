@@ -1,4 +1,4 @@
-package io.graversen.fiber.config;
+package io.graversen.fiber.config.base;
 
 import java.net.InetSocketAddress;
 

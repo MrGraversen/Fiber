@@ -14,6 +14,9 @@ public class Fiber
         ServerConfig serverConfig = new AllNetworkInterfacesServerConfig(1337);
 
         EventBus eventBus = new EventBus();
+
+        SimpleWebSocketServer simpleWebSocketServer = new SimpleWebSocketServer(serverConfig, defaultNetworkClientManager, eventBus);
+
         eventBus.registerEventListener(ServerReadyEvent.class, new AbstractEventListener<ServerReadyEvent>()
         {
             @Override
@@ -38,16 +41,24 @@ public class Fiber
                 event.print();
             }
         });
-        eventBus.registerEventListener(NetworkMessageEvent.class, new AbstractEventListener<NetworkMessageEvent>()
+        eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new AbstractEventListener<NetworkMessageReceivedEvent>()
         {
             @Override
-            public void onEvent(NetworkMessageEvent event)
+            public void onEvent(NetworkMessageReceivedEvent event)
+            {
+                event.print();
+                simpleWebSocketServer.send(event.getNetworkClient(), new StringBuilder(new String(event.getNetworkMessage().getMessageData())).reverse().toString().getBytes());
+            }
+        });
+        eventBus.registerEventListener(NetworkMessageSentEvent.class, new AbstractEventListener<NetworkMessageSentEvent>()
+        {
+            @Override
+            public void onEvent(NetworkMessageSentEvent event)
             {
                 event.print();
             }
         });
 
-        SimpleWebSocketServer simpleWebSocketServer = new SimpleWebSocketServer(serverConfig, defaultNetworkClientManager, eventBus);
         simpleWebSocketServer.start();
     }
 }

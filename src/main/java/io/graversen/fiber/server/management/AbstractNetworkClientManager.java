@@ -1,8 +1,6 @@
 package io.graversen.fiber.server.management;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractNetworkClientManager
@@ -24,6 +22,11 @@ public abstract class AbstractNetworkClientManager
     public Optional<INetworkClient> getClient(String connectionTuple)
     {
         return getClient(connectionTupleToIdStore.getOrDefault(connectionTuple, null));
+    }
+
+    public List<INetworkClient> getAllClients()
+    {
+        return Collections.unmodifiableList(new ArrayList<>(clientStore.values()));
     }
 
     public void storeClient(INetworkClient client)

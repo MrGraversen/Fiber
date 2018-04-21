@@ -3,6 +3,7 @@ package io.graversen.fiber.server.base;
 import io.graversen.fiber.config.ServerConfig;
 import io.graversen.fiber.event.EventBus;
 import io.graversen.fiber.server.management.AbstractNetworkClientManager;
+import io.graversen.fiber.server.management.INetworkClient;
 
 public abstract class AbstractNetworkingServer
 {
@@ -35,4 +36,15 @@ public abstract class AbstractNetworkingServer
     public abstract void start();
 
     public abstract void stop(Exception reason, boolean gently);
+
+    public abstract void broadcast(byte[] messageData);
+
+    public abstract void disconnect(String networkClientId, Exception reason);
+
+    public abstract void disconnect(INetworkClient networkClient, Exception reason);
+
+    public abstract void send(String networkClientId, byte[] messageData);
+
+    public abstract void send(INetworkClient networkClient, byte[] messageData);
+
 }

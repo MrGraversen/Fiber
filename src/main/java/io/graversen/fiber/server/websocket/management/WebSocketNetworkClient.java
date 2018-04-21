@@ -1,20 +1,28 @@
 package io.graversen.fiber.server.websocket.management;
 
 import io.graversen.fiber.server.management.INetworkClient;
+import org.java_websocket.WebSocket;
 
 import java.util.UUID;
 
 public final class WebSocketNetworkClient implements INetworkClient
 {
+    private final WebSocket webSocket;
     private final String id;
     private final String ip;
     private final int port;
 
-    public WebSocketNetworkClient(String ip, int port)
+    public WebSocketNetworkClient(WebSocket webSocket, String ip, int port)
     {
+        this.webSocket = webSocket;
         this.id = UUID.randomUUID().toString();
         this.ip = ip;
         this.port = port;
+    }
+
+    public WebSocket getWebSocket()
+    {
+        return webSocket;
     }
 
     @Override

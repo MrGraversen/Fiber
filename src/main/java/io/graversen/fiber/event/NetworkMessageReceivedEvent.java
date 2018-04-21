@@ -3,12 +3,12 @@ package io.graversen.fiber.event;
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
 
-public class NetworkMessageEvent extends BaseEvent implements IEvent
+public class NetworkMessageReceivedEvent extends BaseEvent implements IEvent
 {
     private final INetworkClient networkClient;
     private final NetworkMessage networkMessage;
 
-    public NetworkMessageEvent(INetworkClient networkClient, NetworkMessage networkMessage)
+    public NetworkMessageReceivedEvent(INetworkClient networkClient, NetworkMessage networkMessage)
     {
         this.networkClient = networkClient;
         this.networkMessage = networkMessage;

@@ -28,6 +28,12 @@ public final class EventBus
         this.threadPool.execute(eventPropagator);
     }
 
+    public boolean hasEventListener(Class<? extends IEvent> eventClass)
+    {
+        final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
+        return !eventListeners.isEmpty();
+    }
+
     public void registerEventListener(Class<? extends IEvent> eventClass, AbstractEventListener<? extends IEvent> eventListener)
     {
         final List<AbstractEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
@@ -43,9 +49,9 @@ public final class EventBus
 
     public void publishEvent(IEvent event)
     {
-        final List<AbstractEventListener<? extends IEvent>> eventListener = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
+        final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
 
-        if (eventListener.isEmpty())
+        if (eventListeners.isEmpty())
         {
             throw new IllegalArgumentException(String.format("No event listener found for event %s. Did you register it?", event.getClass()));
         }

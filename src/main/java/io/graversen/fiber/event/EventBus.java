@@ -1,6 +1,7 @@
 package io.graversen.fiber.event;
 
-import org.ownzone.lib.network.server.async.DefaultThreadPool;
+import io.graversen.fiber.server.async.DefaultThreadPool;
+import io.graversen.fiber.util.Environment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 public final class EventBus
 {
-    private final int THREAD_POOL_SIZE = 1;
+    private final int THREAD_POOL_SIZE = Environment.availableProcessors();
 
     private final ScheduledThreadPoolExecutor threadPool;
     private final Map<Class<? extends IEvent>, List<AbstractEventListener<? extends IEvent>>> eventListenerStore;
@@ -71,8 +72,6 @@ public final class EventBus
                         if (eventQueue.peek() != null)
                         {
                             final IEvent event = eventQueue.poll();
-                            event.print();
-
                             eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
                         }
                     }

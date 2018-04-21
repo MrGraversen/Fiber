@@ -1,14 +1,16 @@
 package io.graversen.fiber.server.management;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.stream.Stream;
+
 public final class NetworkMessage
 {
     private final byte[] messageData;
-    private final INetworkClient networkClient;
 
-    public NetworkMessage(byte[] messageData, INetworkClient networkClient)
+    public NetworkMessage(byte[] messageData)
     {
         this.messageData = messageData;
-        this.networkClient = networkClient;
     }
 
     public byte[] getMessageData()
@@ -16,8 +18,16 @@ public final class NetworkMessage
         return messageData;
     }
 
-    public INetworkClient getNetworkClient()
+    public Stream<Byte> getMessageDataStream()
     {
-        return networkClient;
+        final Byte[] byteArray = new Byte[messageData.length];
+        Arrays.setAll(byteArray, n -> messageData[n]);
+
+        return Stream.of(byteArray);
+    }
+
+    public ByteBuffer getMessageDataBuffer()
+    {
+        return ByteBuffer.wrap(messageData);
     }
 }

@@ -1,29 +1,37 @@
 package io.graversen.fiber.server.websocket.management;
 
-import org.ownzone.lib.network.server.management.INetworkClient;
+import io.graversen.fiber.server.management.INetworkClient;
 
 import java.util.UUID;
 
-public class WebSocketNetworkClient implements INetworkClient
+public final class WebSocketNetworkClient implements INetworkClient
 {
-    private final UUID id;
-    private final String ipAndPort;
+    private final String id;
+    private final String ip;
+    private final int port;
 
-    public WebSocketNetworkClient(String ipAndPort)
+    public WebSocketNetworkClient(String ip, int port)
     {
-        this.id = UUID.randomUUID();
-        this.ipAndPort = ipAndPort;
+        this.id = UUID.randomUUID().toString();
+        this.ip = ip;
+        this.port = port;
     }
 
     @Override
-    public UUID id()
+    public String id()
     {
         return id;
     }
 
     @Override
-    public String ipAndPort()
+    public String ipAddress()
     {
-        return ipAndPort;
+        return ip;
+    }
+
+    @Override
+    public int port()
+    {
+        return port;
     }
 }

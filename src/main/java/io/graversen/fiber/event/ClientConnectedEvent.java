@@ -1,8 +1,8 @@
 package io.graversen.fiber.event;
 
-import org.ownzone.lib.network.server.management.INetworkClient;
+import io.graversen.fiber.server.management.INetworkClient;
 
-public class ClientConnectedEvent implements IEvent
+public class ClientConnectedEvent extends BaseEvent implements IEvent
 {
     private final INetworkClient networkClient;
 
@@ -14,5 +14,11 @@ public class ClientConnectedEvent implements IEvent
     public INetworkClient getNetworkClient()
     {
         return networkClient;
+    }
+
+    @Override
+    public void print()
+    {
+        System.out.println(String.format("Event - %s - %s", getClass().getSimpleName(), networkClient.connectionTuple()));
     }
 }

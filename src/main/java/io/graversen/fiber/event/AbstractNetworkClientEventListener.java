@@ -1,6 +1,6 @@
 package io.graversen.fiber.event;
 
-import org.ownzone.lib.network.server.management.INetworkClient;
+import io.graversen.fiber.server.management.INetworkClient;
 
 public abstract class AbstractNetworkClientEventListener
 {
@@ -11,8 +11,8 @@ public abstract class AbstractNetworkClientEventListener
         this.eventBus = eventBus;
         this.eventBus.registerEventListener(ClientConnectedEvent.class, this.clientConnectedListener);
         this.eventBus.registerEventListener(ClientDisconnectedEvent.class, this.clientDisconnectedListener);
-        // TODO network message
         this.eventBus.registerEventListener(ServerReadyEvent.class, this.serverReadyListener);
+
     }
 
     public abstract void onClientConnected(INetworkClient networkClient);

@@ -1,9 +1,15 @@
 package io.graversen.fiber.server.management;
 
-import java.util.UUID;
-
 public interface INetworkClient
 {
-    UUID id();
-    String ipAndPort();
+    String id();
+
+    String ipAddress();
+
+    int port();
+
+    default String connectionTuple()
+    {
+        return String.format("%s:%d", ipAddress(), port());
+    }
 }

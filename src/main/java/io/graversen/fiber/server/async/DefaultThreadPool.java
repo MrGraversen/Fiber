@@ -1,6 +1,6 @@
 package io.graversen.fiber.server.async;
 
-import org.ownzone.lib.network.util.Environment;
+import io.graversen.fiber.util.Environment;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 

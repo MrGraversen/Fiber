@@ -45,24 +45,28 @@ public class EventBus
         }
     }
 
-    public void publishEvent(IEvent event)
+    public void emitEvent(IEvent event)
     {
-        this.publishEvent(event, false);
+        this.emitEvent(event, false);
     }
 
-    public void publishEvent(IEvent event, boolean requiresPropagation)
+    public void emitEvent(IEvent event, boolean requiresPropagation)
     {
-        final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
-
-        if (requiresPropagation && eventListeners.isEmpty())
+        synchronized (eventPropagator.LOCK)
         {
-            throw new IllegalArgumentException(String.format("No event listener found for event %s. Did you register it?", event.getClass()));
+            final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
+
+            if (requiresPropagation && eventListeners.isEmpty())
+            {
+                throw new IllegalArgumentException(String.format("No event listener found for event %s. Did you register it?", event.getClass()));
+            }
+
+            final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.get(event.getClass());
+            eventQueue.add(event);
+
+            eventQueueStore.put(event.getClass(), eventQueue);
+            eventPropagator.LOCK.notify();
         }
-
-        final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.get(event.getClass());
-        eventQueue.add(event);
-
-        eventQueueStore.put(event.getClass(), eventQueue);
     }
 
     public int getThreadPoolSize()
@@ -72,6 +76,8 @@ public class EventBus
 
     private class EventPropagator implements Runnable
     {
+        private final Object LOCK = new Object();
+
         @Override
         public void run()
         {
@@ -79,24 +85,20 @@ public class EventBus
             {
                 while (!Thread.currentThread().isInterrupted())
                 {
-                    for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet())
+                    synchronized (LOCK)
                     {
-                        final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.getOrDefault(eventClass, new ConcurrentLinkedQueue<>());
-
-                        if (eventQueue.peek() != null)
+                        for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet())
                         {
-                            final IEvent event = eventQueue.poll();
-                            eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
-                        }
-                    }
+                            final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.getOrDefault(eventClass, new ConcurrentLinkedQueue<>());
 
-                    try
-                    {
-                        Thread.sleep(1);
-                    }
-                    catch (InterruptedException e)
-                    {
-                        Thread.currentThread().interrupt();
+                            if (eventQueue.peek() != null)
+                            {
+                                final IEvent event = eventQueue.poll();
+                                eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
+                            }
+                        }
+
+                        LOCK.wait(1);
                     }
                 }
             }

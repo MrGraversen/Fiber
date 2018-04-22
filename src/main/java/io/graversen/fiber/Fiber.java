@@ -12,7 +12,7 @@ public class Fiber
     {
         DefaultNetworkClientManager defaultNetworkClientManager = new DefaultNetworkClientManager();
 //        ServerConfig serverConfig = new AllNetworkInterfacesServerConfig(1337);
-        TcpServerConfig serverConfig = new TcpServerConfig(1337, "0.0.0.0", 1000, 1024, 1024);
+        TcpServerConfig serverConfig = new TcpServerConfig(1337, "0.0.0.0", 1000, 128, 128);
 
         EventBus eventBus = new EventBus();
 
@@ -48,6 +48,7 @@ public class Fiber
             @Override
             public void onEvent(NetworkMessageReceivedEvent event)
             {
+                System.out.println(System.currentTimeMillis());
                 event.print();
 
                 //                    server.send(event.getNetworkClient(), new StringBuilder(new String(event.getNetworkMessage().getMessageData())).reverse().toString().getBytes());
@@ -57,7 +58,7 @@ public class Fiber
                     server.send(event.getNetworkClient(), "test reply!".getBytes());
                 }
 
-                if (event.getNetworkMessage().sizeInBytes() == 1024)
+                if (event.getNetworkMessage().sizeInBytes() == 128)
                 {
                     server.send(event.getNetworkClient(), event.getNetworkMessage().getMessageData());
                 }

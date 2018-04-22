@@ -49,7 +49,7 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
         }
 
         final ServerClosedEvent serverClosedEvent = new ServerClosedEvent(this);
-        getEventBus().publishEvent(serverClosedEvent, true);
+        getEventBus().emitEvent(serverClosedEvent, true);
     }
 
     @Override
@@ -84,7 +84,7 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
         ((WebSocketNetworkClient) networkClient).getWebSocket().send(new String(messageData));
 
         final NetworkMessageSentEvent networkMessageSentEvent = new NetworkMessageSentEvent(networkClient, new NetworkMessage(messageData));
-        getEventBus().publishEvent(networkMessageSentEvent, true);
+        getEventBus().emitEvent(networkMessageSentEvent, true);
     }
 
     private class WsServer extends WebSocketServer
@@ -104,7 +104,7 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
             getNetworkClientManager().storeClient(webSocketNetworkClient);
 
             final ClientConnectedEvent clientConnectedEvent = new ClientConnectedEvent(webSocketNetworkClient);
-            getEventBus().publishEvent(clientConnectedEvent, true);
+            getEventBus().emitEvent(clientConnectedEvent, true);
         }
 
         @Override
@@ -114,7 +114,7 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
             getNetworkClientManager().deleteClient(webSocketNetworkClient);
 
             final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(webSocketNetworkClient, new IOException(reason));
-            getEventBus().publishEvent(clientDisconnectedEvent, true);
+            getEventBus().emitEvent(clientDisconnectedEvent, true);
         }
 
         @Override
@@ -124,7 +124,7 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
             final NetworkMessage networkMessage = new NetworkMessage(message.getBytes());
 
             final NetworkMessageReceivedEvent networkMessageReceivedEvent = new NetworkMessageReceivedEvent(webSocketNetworkClient, networkMessage);
-            getEventBus().publishEvent(networkMessageReceivedEvent, true);
+            getEventBus().emitEvent(networkMessageReceivedEvent, true);
         }
 
         @Override
@@ -138,7 +138,7 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
         public void onStart()
         {
             final ServerReadyEvent serverReadyEvent = new ServerReadyEvent(abstractWebSocketServer);
-            getEventBus().publishEvent(serverReadyEvent, true);
+            getEventBus().emitEvent(serverReadyEvent, true);
         }
     }
 }

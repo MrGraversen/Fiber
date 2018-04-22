@@ -9,7 +9,7 @@ public interface IEvent
         System.out.println(String.format("Event - %s", getClass().getSimpleName()));
     }
 
-    LocalDateTime eventTriggeredAt();
+    LocalDateTime eventEmittedAt();
 
     LocalDateTime eventPropagatedAt();
 

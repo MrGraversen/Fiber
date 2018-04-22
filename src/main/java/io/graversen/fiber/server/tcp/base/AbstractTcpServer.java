@@ -41,7 +41,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
         this.eventLoopRunner.start();
 
         final ServerReadyEvent serverReadyEvent = new ServerReadyEvent(this);
-        getEventBus().publishEvent(serverReadyEvent, true);
+        getEventBus().emitEvent(serverReadyEvent, true);
     }
 
     @Override
@@ -73,7 +73,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
             tcpNetworkClient.getSocketChannel().close();
 
             final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(tcpNetworkClient, new IOException(reason));
-            getEventBus().publishEvent(clientDisconnectedEvent, true);
+            getEventBus().emitEvent(clientDisconnectedEvent, true);
         }
         catch (IOException e)
         {
@@ -178,7 +178,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                     catch (Exception e)
                     {
                         final ServerErrorEvent serverErrorEvent = new ServerErrorEvent(abstractTcpServer, e);
-                        getEventBus().publishEvent(serverErrorEvent, true);
+                        getEventBus().emitEvent(serverErrorEvent, true);
                     }
 
                     try
@@ -213,7 +213,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                 getNetworkClientManager().storeClient(tcpNetworkClient);
 
                 final ClientConnectedEvent clientConnectedEvent = new ClientConnectedEvent(tcpNetworkClient);
-                getEventBus().publishEvent(clientConnectedEvent, true);
+                getEventBus().emitEvent(clientConnectedEvent, true);
             }
         }
 
@@ -232,6 +232,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
 
             if (readBytes > 0)
             {
+                System.out.println(System.currentTimeMillis());
                 readBuffer.flip();
                 final byte[] dataBuffer = new byte[serverConfig.getClientReceiveBufferBytes()];
                 readBuffer.get(dataBuffer, 0, readBytes);
@@ -246,7 +247,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                     final NetworkMessage networkMessage = new NetworkMessage(dataTrimmed);
 
                     final NetworkMessageReceivedEvent networkMessageReceivedEvent = new NetworkMessageReceivedEvent(tcpNetworkClient, networkMessage);
-                    getEventBus().publishEvent(networkMessageReceivedEvent, true);
+                    getEventBus().emitEvent(networkMessageReceivedEvent, true);
                 });
             }
 
@@ -270,7 +271,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                         socketChannel.write(ByteBuffer.wrap(networkMessage.getMessageData()));
 
                         final NetworkMessageSentEvent networkMessageSentEvent = new NetworkMessageSentEvent(tcpNetworkClient, networkMessage);
-                        getEventBus().publishEvent(networkMessageSentEvent, true);
+                        getEventBus().emitEvent(networkMessageSentEvent, true);
                     }
                     catch (IOException e)
                     {
@@ -304,7 +305,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
             if (reason instanceof CancelledKeyException) return;
 
             final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(tcpNetworkClient, new IOException(reason));
-            getEventBus().publishEvent(clientDisconnectedEvent, true);
+            getEventBus().emitEvent(clientDisconnectedEvent, true);
         }
 
         private byte[] trimByteArray(byte[] bytes)

@@ -4,18 +4,18 @@ import java.time.LocalDateTime;
 
 public class BaseEvent implements IEvent
 {
-    private final LocalDateTime eventTriggeredAt;
+    private final LocalDateTime eventEmittedAt;
     private LocalDateTime eventPropagatedAt;
     private LocalDateTime eventFinishedExecutionAt;
 
     public BaseEvent()
     {
-        this.eventTriggeredAt = LocalDateTime.now();
+        this.eventEmittedAt = LocalDateTime.now();
     }
 
-    public LocalDateTime eventTriggeredAt()
+    public LocalDateTime eventEmittedAt()
     {
-        return eventTriggeredAt;
+        return eventEmittedAt;
     }
 
     public LocalDateTime eventPropagatedAt()

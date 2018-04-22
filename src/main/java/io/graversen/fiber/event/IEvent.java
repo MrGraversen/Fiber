@@ -10,4 +10,12 @@ public interface IEvent
     }
 
     LocalDateTime eventTriggeredAt();
+
+    LocalDateTime eventPropagatedAt();
+
+    LocalDateTime eventFinishedExecutionAt();
+
+    void propagate();
+
+    void finish();
 }

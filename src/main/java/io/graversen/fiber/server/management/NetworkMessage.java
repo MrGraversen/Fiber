@@ -30,4 +30,9 @@ public final class NetworkMessage
     {
         return ByteBuffer.wrap(messageData);
     }
+
+    public int sizeInBytes()
+    {
+        return messageData.length;
+    }
 }

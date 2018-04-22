@@ -55,5 +55,4 @@ public abstract class AbstractNetworkingServer
     public abstract void send(String networkClientId, byte[] messageData);
 
     public abstract void send(INetworkClient networkClient, byte[] messageData);
-
 }

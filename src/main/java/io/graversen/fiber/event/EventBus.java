@@ -89,6 +89,15 @@ public class EventBus
                             eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
                         }
                     }
+
+                    try
+                    {
+                        Thread.sleep(1);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
             catch (Exception e)

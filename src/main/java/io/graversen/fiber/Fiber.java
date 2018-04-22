@@ -1,7 +1,5 @@
 package io.graversen.fiber;
 
-import io.graversen.fiber.config.base.AllNetworkInterfacesServerConfig;
-import io.graversen.fiber.config.base.ServerConfig;
 import io.graversen.fiber.config.tcp.TcpServerConfig;
 import io.graversen.fiber.event.*;
 import io.graversen.fiber.server.base.AbstractNetworkingServer;
@@ -51,7 +49,23 @@ public class Fiber
             public void onEvent(NetworkMessageReceivedEvent event)
             {
                 event.print();
-                server.send(event.getNetworkClient(), new StringBuilder(new String(event.getNetworkMessage().getMessageData())).reverse().toString().getBytes());
+
+                //                    server.send(event.getNetworkClient(), new StringBuilder(new String(event.getNetworkMessage().getMessageData())).reverse().toString().getBytes());
+
+                if (new String(event.getNetworkMessage().getMessageData()).equals("test2"))
+                {
+                    server.send(event.getNetworkClient(), "test reply!".getBytes());
+                }
+
+                if (event.getNetworkMessage().sizeInBytes() == 1024)
+                {
+                    server.send(event.getNetworkClient(), event.getNetworkMessage().getMessageData());
+                }
+
+                if (new String(event.getNetworkMessage().getMessageData()).equals("q"))
+                {
+                    server.disconnect(event.getNetworkClient(), new Exception("Get rekt!"));
+                }
             }
         });
         eventBus.registerEventListener(NetworkMessageSentEvent.class, new AbstractEventListener<NetworkMessageSentEvent>()

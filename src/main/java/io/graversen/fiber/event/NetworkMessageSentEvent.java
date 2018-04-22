@@ -27,6 +27,6 @@ public class NetworkMessageSentEvent extends BaseEvent implements IEvent
     @Override
     public void print()
     {
-        System.out.println(String.format("Event - %s - %s: %s", getClass().getSimpleName(), networkClient.connectionTuple(), new String(networkMessage.getMessageData())));
+        System.out.println(String.format("Event - %s - %s (%d bytes): %s", getClass().getSimpleName(), networkClient.connectionTuple(), networkMessage.sizeInBytes(), new String(networkMessage.getMessageData())));
     }
 }

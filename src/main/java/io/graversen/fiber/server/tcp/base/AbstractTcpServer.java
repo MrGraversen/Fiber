@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.concurrent.ThreadFactory;
 
 public class AbstractTcpServer extends AbstractNetworkingServer
@@ -52,31 +53,49 @@ public class AbstractTcpServer extends AbstractNetworkingServer
     @Override
     public void broadcast(byte[] messageData)
     {
-
+        getNetworkClientManager().getAllClients().forEach(networkClient -> send(networkClient, messageData));
     }
 
     @Override
     public void disconnect(String networkClientId, Exception reason)
     {
-
+        final Optional<INetworkClient> networkClientById = getNetworkClientManager().getClient(networkClientId);
+        networkClientById.ifPresent(networkClient -> disconnect(networkClient, reason));
     }
 
     @Override
     public void disconnect(INetworkClient networkClient, Exception reason)
     {
+        final TcpNetworkClient tcpNetworkClient = ((TcpNetworkClient) networkClient);
 
+        try
+        {
+            tcpNetworkClient.getSocketChannel().close();
+
+            final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(tcpNetworkClient, new IOException(reason));
+            getEventBus().publishEvent(clientDisconnectedEvent, true);
+        }
+        catch (IOException e)
+        {
+            // Ignored
+        }
     }
 
     @Override
     public void send(String networkClientId, byte[] messageData)
     {
-
+        final Optional<INetworkClient> networkClientById = getNetworkClientManager().getClient(networkClientId);
+        networkClientById.ifPresent(networkClient -> send(networkClient, messageData));
     }
 
     @Override
     public void send(INetworkClient networkClient, byte[] messageData)
     {
+        final TcpNetworkClient tcpNetworkClient = ((TcpNetworkClient) networkClient);
 
+        tcpNetworkClient.putOnNetworkQueue(new NetworkMessage(messageData));
+        tcpSocketServerWrapper.removeInterest(tcpNetworkClient.getSelectionKey(), SelectionKey.OP_READ);
+        tcpSocketServerWrapper.addInterest(tcpNetworkClient.getSelectionKey(), SelectionKey.OP_WRITE);
     }
 
     private class TcpSocketServerWrapper
@@ -145,14 +164,14 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                                     }
                                 }
                             }
-                            catch (CancelledKeyException cke)
+                            catch (IOException | CancelledKeyException e1)
                             {
-                                // Ignore
+                                close(selectionKey, e1);
                             }
-                            catch (Exception e)
+                            catch (Exception e2)
                             {
-                                close(selectionKey, e);
-                                throw new RuntimeException(e);
+                                close(selectionKey, e2);
+                                throw new RuntimeException(e2);
                             }
                         });
                     }
@@ -160,6 +179,15 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                     {
                         final ServerErrorEvent serverErrorEvent = new ServerErrorEvent(abstractTcpServer, e);
                         getEventBus().publishEvent(serverErrorEvent, true);
+                    }
+
+                    try
+                    {
+                        Thread.sleep(1);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        Thread.currentThread().interrupt();
                     }
                 }
             };
@@ -177,10 +205,11 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                 socketChannel.socket().setSendBufferSize(serverConfig.getClientSendBufferBytes());
 
                 socketChannel.register(defaultSelector, SelectionKey.OP_READ);
+                while (!socketChannel.finishConnect()) ;
 
                 final InetAddress socketAddress = socketChannel.socket().getInetAddress();
 
-                final TcpNetworkClient tcpNetworkClient = new TcpNetworkClient(socketChannel, socketAddress.getHostAddress(), socketChannel.socket().getPort());
+                final TcpNetworkClient tcpNetworkClient = new TcpNetworkClient(socketChannel, socketChannel.keyFor(defaultSelector), socketAddress.getHostAddress(), socketChannel.socket().getPort());
                 getNetworkClientManager().storeClient(tcpNetworkClient);
 
                 final ClientConnectedEvent clientConnectedEvent = new ClientConnectedEvent(tcpNetworkClient);
@@ -210,23 +239,48 @@ public class AbstractTcpServer extends AbstractNetworkingServer
 
                 final InetAddress socketAddress = socketChannel.socket().getInetAddress();
 
-                final TcpNetworkClient tcpNetworkClient = new TcpNetworkClient(socketChannel, socketAddress.getHostAddress(), socketChannel.socket().getPort());
-                final NetworkMessage networkMessage = new NetworkMessage(dataTrimmed);
+                final String connectionTuple = String.format("%s:%d", socketAddress.getHostAddress(), socketChannel.socket().getPort());
+                final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
-                final NetworkMessageReceivedEvent networkMessageReceivedEvent = new NetworkMessageReceivedEvent(tcpNetworkClient, networkMessage);
-                getEventBus().publishEvent(networkMessageReceivedEvent, true);
+                tcpNetworkClientByConnectionTuple.ifPresent(tcpNetworkClient -> {
+                    final NetworkMessage networkMessage = new NetworkMessage(dataTrimmed);
+
+                    final NetworkMessageReceivedEvent networkMessageReceivedEvent = new NetworkMessageReceivedEvent(tcpNetworkClient, networkMessage);
+                    getEventBus().publishEvent(networkMessageReceivedEvent, true);
+                });
             }
+
+            removeInterest(selectionKey, SelectionKey.OP_READ);
+            addInterest(selectionKey, SelectionKey.OP_WRITE);
         }
 
         private void write(SelectionKey selectionKey)
         {
             final SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
             final InetAddress socketAddress = socketChannel.socket().getInetAddress();
-            final TcpNetworkClient tcpNetworkClient = new TcpNetworkClient(socketChannel, socketAddress.getHostAddress(), socketChannel.socket().getPort());
+            final String connectionTuple = String.format("%s:%d", socketAddress.getHostAddress(), socketChannel.socket().getPort());
+            final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
-            
+            tcpNetworkClientByConnectionTuple.ifPresent(networkClient -> {
+                final TcpNetworkClient tcpNetworkClient = ((TcpNetworkClient) networkClient);
 
-            selectionKey.interestOps(SelectionKey.OP_READ);
+                tcpNetworkClient.pollAllFromNetworkQueue().forEach(networkMessage -> {
+                    try
+                    {
+                        socketChannel.write(ByteBuffer.wrap(networkMessage.getMessageData()));
+
+                        final NetworkMessageSentEvent networkMessageSentEvent = new NetworkMessageSentEvent(tcpNetworkClient, networkMessage);
+                        getEventBus().publishEvent(networkMessageSentEvent, true);
+                    }
+                    catch (IOException e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                });
+            });
+
+            removeInterest(selectionKey, SelectionKey.OP_WRITE);
+            addInterest(selectionKey, SelectionKey.OP_READ);
         }
 
         private void close(SelectionKey selectionKey, Exception reason)
@@ -234,7 +288,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
             final SocketChannel socketChannel = ((SocketChannel) selectionKey.channel());
             final InetAddress socketAddress = socketChannel.socket().getInetAddress();
 
-            final TcpNetworkClient tcpNetworkClient = new TcpNetworkClient(socketChannel, socketAddress.getHostAddress(), socketChannel.socket().getPort());
+            final TcpNetworkClient tcpNetworkClient = new TcpNetworkClient(socketChannel, selectionKey, socketAddress.getHostAddress(), socketChannel.socket().getPort());
             getNetworkClientManager().deleteClient(tcpNetworkClient);
 
             try
@@ -247,6 +301,8 @@ public class AbstractTcpServer extends AbstractNetworkingServer
                 e.printStackTrace();
             }
 
+            if (reason instanceof CancelledKeyException) return;
+
             final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(tcpNetworkClient, new IOException(reason));
             getEventBus().publishEvent(clientDisconnectedEvent, true);
         }
@@ -254,10 +310,20 @@ public class AbstractTcpServer extends AbstractNetworkingServer
         private byte[] trimByteArray(byte[] bytes)
         {
             int i = bytes.length - 1;
-
             while (i >= 0 && bytes[i] == 0) --i;
-
             return Arrays.copyOf(bytes, i + 1);
+        }
+
+        private void addInterest(SelectionKey selectionKey, int interest)
+        {
+            int interests = selectionKey.interestOps();
+            selectionKey.interestOps(interests | interest);
+        }
+
+        private void removeInterest(SelectionKey selectionKey, int interest)
+        {
+            int interests = selectionKey.interestOps();
+            selectionKey.interestOps(interests & ~interest);
         }
     }
 }

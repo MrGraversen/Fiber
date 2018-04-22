@@ -14,12 +14,12 @@ public abstract class AbstractNetworkClientManager
         this.connectionTupleToIdStore = new ConcurrentHashMap<>();
     }
 
-    public Optional<INetworkClient> getClient(UUID id)
+    public Optional<INetworkClient> getClient(String id)
     {
         return Optional.ofNullable(clientStore.getOrDefault(id, null));
     }
 
-    public Optional<INetworkClient> getClient(String connectionTuple)
+    public Optional<INetworkClient> getClientByConnectionTuple(String connectionTuple)
     {
         return getClient(connectionTupleToIdStore.getOrDefault(connectionTuple, null));
     }

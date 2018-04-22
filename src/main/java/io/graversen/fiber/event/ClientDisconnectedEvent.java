@@ -26,6 +26,6 @@ public class ClientDisconnectedEvent extends BaseEvent implements IEvent
     @Override
     public void print()
     {
-        System.out.println(String.format("Event - %s - %s", getClass().getSimpleName(), networkClient.connectionTuple()));
+        System.out.println(String.format("Event - %s - %s: %s", getClass().getSimpleName(), networkClient.connectionTuple(), reason.getMessage()));
     }
 }

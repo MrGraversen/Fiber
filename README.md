@@ -21,6 +21,8 @@ Currently, these types of servers are supported:
 It's a good question. In practice, you probably want to use [Netty](https://netty.io/) instead of trying to create your own networking engine.
 I'm not trying to make the next Netty; I'm just trying to get a little more intimate with the challenges of networking and concurrency, with the added challenge of using very few depedencies (Let's face it, I'm not going to implement the whole WebSocket RFC).
 
+I will eventually try to implement different kinds of generic servers (e.g. a web server, local network file sharing, etc.) on top of _Fiber_ as a sort of acceptance test. Fun stuff!
+
 ## Design and Concepts
 
 _Fiber_ heavily employs Observer Pattern to notify event subscribers of interesting occurrences. It uses an event bus to dispatch events, using threads to offload the server thread, which produced the event. One of the design goals is that I/O should be as _lean_ as possible; thus requiring event propagation and handler execution to take place on threads seperate from the network I/O.

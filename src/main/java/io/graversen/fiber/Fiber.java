@@ -13,6 +13,7 @@ public class Fiber
 {
     public static void main(String[] args)
     {
+
         DefaultNetworkClientManager defaultNetworkClientManager = new DefaultNetworkClientManager();
 //        ServerConfig serverConfig = new AllNetworkInterfacesServerConfig(1337);
         TcpServerConfig serverConfig = new TcpServerConfig(1337, "0.0.0.0", 1000, 128, 128);
@@ -80,7 +81,7 @@ public class Fiber
 
                 if (new String(event.getNetworkMessage().getMessageData()).equals("q"))
                 {
-                    server.disconnect(event.getNetworkClient(), new Exception("Get disconnected boiii"));
+                    server.disconnect(event.getNetworkClient(), new Exception("Get disconnected, yo!"));
                 }
             }
         });
@@ -102,6 +103,6 @@ public class Fiber
         });
 
         server.start();
-        server.stop(new RuntimeException("Yes ses"), true);
+        server.stop(new RuntimeException("Bye!"), true);
     }
 }

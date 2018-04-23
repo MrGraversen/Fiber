@@ -1,7 +1,8 @@
 package io.graversen.fiber.server.tcp.base;
 
 import io.graversen.fiber.config.tcp.TcpServerConfig;
-import io.graversen.fiber.event.*;
+import io.graversen.fiber.event.bus.AbstractEventBus;
+import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.server.async.DefaultThreadFactory;
 import io.graversen.fiber.server.base.AbstractNetworkingServer;
 import io.graversen.fiber.server.management.AbstractNetworkClientManager;
@@ -25,9 +26,9 @@ public class AbstractTcpServer extends AbstractNetworkingServer
     private final Thread eventLoopRunner;
     private final TcpServerConfig serverConfig;
 
-    public AbstractTcpServer(TcpServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, EventBus eventBus)
+    public AbstractTcpServer(TcpServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, AbstractEventBus abstractEventBus)
     {
-        super(serverConfig, networkClientManager, eventBus);
+        super(serverConfig, networkClientManager, abstractEventBus);
         this.serverConfig = serverConfig;
         this.tcpSocketServerWrapper = new TcpSocketServerWrapper(this);
         this.threadFactory = new DefaultThreadFactory(getClass().getSimpleName());
@@ -47,7 +48,14 @@ public class AbstractTcpServer extends AbstractNetworkingServer
     @Override
     public void stop(Exception reason, boolean gently)
     {
+        if (gently)
+        {
+            getNetworkClientManager().getAllClients().forEach(networkClient -> disconnect(networkClient, reason));
+        }
 
+        tcpSocketServerWrapper.stop();
+        final ServerClosedEvent serverClosedEvent = new ServerClosedEvent(this, reason);
+        getEventBus().emitEvent(serverClosedEvent, true);
     }
 
     @Override
@@ -130,6 +138,18 @@ public class AbstractTcpServer extends AbstractNetworkingServer
             catch (IOException e)
             {
                 throw new RuntimeException(e);
+            }
+        }
+
+        public void stop()
+        {
+            try
+            {
+                this.serverSocketChannel.close();
+            }
+            catch (IOException e)
+            {
+                // Ignored
             }
         }
 
@@ -232,7 +252,6 @@ public class AbstractTcpServer extends AbstractNetworkingServer
 
             if (readBytes > 0)
             {
-                System.out.println(System.currentTimeMillis());
                 readBuffer.flip();
                 final byte[] dataBuffer = new byte[serverConfig.getClientReceiveBufferBytes()];
                 readBuffer.get(dataBuffer, 0, readBytes);

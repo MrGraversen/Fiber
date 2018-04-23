@@ -1,7 +1,10 @@
 package io.graversen.fiber;
 
 import io.graversen.fiber.config.tcp.TcpServerConfig;
-import io.graversen.fiber.event.*;
+import io.graversen.fiber.event.bus.AbstractEventBus;
+import io.graversen.fiber.event.bus.DefaultEventBus;
+import io.graversen.fiber.event.common.*;
+import io.graversen.fiber.event.listeners.AbstractEventListener;
 import io.graversen.fiber.server.base.AbstractNetworkingServer;
 import io.graversen.fiber.server.management.DefaultNetworkClientManager;
 import io.graversen.fiber.server.tcp.SimpleTcpServer;
@@ -14,12 +17,12 @@ public class Fiber
 //        ServerConfig serverConfig = new AllNetworkInterfacesServerConfig(1337);
         TcpServerConfig serverConfig = new TcpServerConfig(1337, "0.0.0.0", 1000, 128, 128);
 
-        EventBus eventBus = new EventBus();
+        AbstractEventBus abstractEventBus = new DefaultEventBus();
 
 //        AbstractNetworkingServer server = new SimpleWebSocketServer(serverConfig, defaultNetworkClientManager, eventBus);
-        AbstractNetworkingServer server = new SimpleTcpServer(serverConfig, defaultNetworkClientManager, eventBus);
+        AbstractNetworkingServer server = new SimpleTcpServer(serverConfig, defaultNetworkClientManager, abstractEventBus);
 
-        eventBus.registerEventListener(ServerReadyEvent.class, new AbstractEventListener<ServerReadyEvent>()
+        abstractEventBus.registerEventListener(ServerReadyEvent.class, new AbstractEventListener<ServerReadyEvent>()
         {
             @Override
             public void onEvent(ServerReadyEvent event)
@@ -27,7 +30,15 @@ public class Fiber
                 event.print();
             }
         });
-        eventBus.registerEventListener(ClientConnectedEvent.class, new AbstractEventListener<ClientConnectedEvent>()
+        abstractEventBus.registerEventListener(ServerClosedEvent.class, new AbstractEventListener<ServerClosedEvent>()
+        {
+            @Override
+            public void onEvent(ServerClosedEvent event)
+            {
+                event.print();
+            }
+        });
+        abstractEventBus.registerEventListener(ClientConnectedEvent.class, new AbstractEventListener<ClientConnectedEvent>()
         {
             @Override
             public void onEvent(ClientConnectedEvent event)
@@ -35,7 +46,7 @@ public class Fiber
                 event.print();
             }
         });
-        eventBus.registerEventListener(ClientDisconnectedEvent.class, new AbstractEventListener<ClientDisconnectedEvent>()
+        abstractEventBus.registerEventListener(ClientDisconnectedEvent.class, new AbstractEventListener<ClientDisconnectedEvent>()
         {
             @Override
             public void onEvent(ClientDisconnectedEvent event)
@@ -43,15 +54,19 @@ public class Fiber
                 event.print();
             }
         });
-        eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new AbstractEventListener<NetworkMessageReceivedEvent>()
+        abstractEventBus.registerEventListener(NetworkMessageReceivedEvent.class, new AbstractEventListener<NetworkMessageReceivedEvent>()
         {
             @Override
             public void onEvent(NetworkMessageReceivedEvent event)
             {
-                System.out.println(System.currentTimeMillis());
                 event.print();
 
-                //                    server.send(event.getNetworkClient(), new StringBuilder(new String(event.getNetworkMessage().getMessageData())).reverse().toString().getBytes());
+                //server.send(event.getNetworkClient(), new StringBuilder(new String(event.getNetworkMessage().getMessageData())).reverse().toString().getBytes());
+
+                if (new String(event.getNetworkMessage().getMessageData()).equals("test1"))
+                {
+                    server.broadcast("test broadcast boys!".getBytes());
+                }
 
                 if (new String(event.getNetworkMessage().getMessageData()).equals("test2"))
                 {
@@ -65,11 +80,11 @@ public class Fiber
 
                 if (new String(event.getNetworkMessage().getMessageData()).equals("q"))
                 {
-                    server.disconnect(event.getNetworkClient(), new Exception("Get rekt!"));
+                    server.disconnect(event.getNetworkClient(), new Exception("Get disconnected boiii"));
                 }
             }
         });
-        eventBus.registerEventListener(NetworkMessageSentEvent.class, new AbstractEventListener<NetworkMessageSentEvent>()
+        abstractEventBus.registerEventListener(NetworkMessageSentEvent.class, new AbstractEventListener<NetworkMessageSentEvent>()
         {
             @Override
             public void onEvent(NetworkMessageSentEvent event)
@@ -77,7 +92,7 @@ public class Fiber
                 event.print();
             }
         });
-        eventBus.registerEventListener(ServerErrorEvent.class, new AbstractEventListener<ServerErrorEvent>()
+        abstractEventBus.registerEventListener(ServerErrorEvent.class, new AbstractEventListener<ServerErrorEvent>()
         {
             @Override
             public void onEvent(ServerErrorEvent event)
@@ -87,5 +102,6 @@ public class Fiber
         });
 
         server.start();
+        server.stop(new RuntimeException("Yes ses"), true);
     }
 }

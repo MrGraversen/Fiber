@@ -1,21 +1,21 @@
 package io.graversen.fiber.server.base;
 
 import io.graversen.fiber.config.base.ServerConfig;
-import io.graversen.fiber.event.EventBus;
+import io.graversen.fiber.event.bus.AbstractEventBus;
 import io.graversen.fiber.server.management.AbstractNetworkClientManager;
 import io.graversen.fiber.server.management.INetworkClient;
 
 public abstract class AbstractNetworkingServer
 {
     private final AbstractNetworkClientManager networkClientManager;
-    private final EventBus eventBus;
+    private final AbstractEventBus abstractEventBus;
     private final ServerConfig serverConfig;
 
-    public AbstractNetworkingServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, EventBus eventBus)
+    public AbstractNetworkingServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, AbstractEventBus abstractEventBus)
     {
         this.serverConfig = serverConfig;
         this.networkClientManager = networkClientManager;
-        this.eventBus = eventBus;
+        this.abstractEventBus = abstractEventBus;
 
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable()
         {
@@ -37,9 +37,9 @@ public abstract class AbstractNetworkingServer
         return serverConfig;
     }
 
-    public EventBus getEventBus()
+    public AbstractEventBus getEventBus()
     {
-        return eventBus;
+        return abstractEventBus;
     }
 
     public abstract void start();

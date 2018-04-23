@@ -1,5 +1,7 @@
-package io.graversen.fiber.event;
+package io.graversen.fiber.event.bus;
 
+import io.graversen.fiber.event.listeners.AbstractEventListener;
+import io.graversen.fiber.event.common.IEvent;
 import io.graversen.fiber.server.async.DefaultThreadPool;
 import io.graversen.fiber.util.Environment;
 
@@ -8,30 +10,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 
-public class EventBus
+public class DefaultEventBus extends AbstractEventBus
 {
-    private final ThreadPoolExecutor threadPool;
     private final Map<Class<? extends IEvent>, List<AbstractEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
     private final EventPropagator eventPropagator;
 
-    public EventBus()
+    public DefaultEventBus()
     {
-        this.threadPool = new DefaultThreadPool(getThreadPoolSize(), getClass().getSimpleName());
+        super.executorService = new DefaultThreadPool(getThreadPoolSize(), getClass().getSimpleName());
         this.eventListenerStore = new ConcurrentHashMap<>();
         this.eventQueueStore = new ConcurrentHashMap<>();
         this.eventPropagator = new EventPropagator();
-        this.threadPool.execute(eventPropagator);
+        this.executorService.execute(eventPropagator);
     }
 
+    @Override
     public boolean hasEventListener(Class<? extends IEvent> eventClass)
     {
         final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
         return !eventListeners.isEmpty();
     }
 
+    @Override
     public void registerEventListener(Class<? extends IEvent> eventClass, AbstractEventListener<? extends IEvent> eventListener)
     {
         final List<AbstractEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
@@ -45,11 +47,13 @@ public class EventBus
         }
     }
 
+    @Override
     public void emitEvent(IEvent event)
     {
         this.emitEvent(event, false);
     }
 
+    @Override
     public void emitEvent(IEvent event, boolean requiresPropagation)
     {
         final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
@@ -70,6 +74,7 @@ public class EventBus
         }
     }
 
+    @Override
     public int getThreadPoolSize()
     {
         return Environment.availableProcessors();

@@ -1,7 +1,8 @@
 package io.graversen.fiber.server.websocket.base;
 
 import io.graversen.fiber.config.base.ServerConfig;
-import io.graversen.fiber.event.*;
+import io.graversen.fiber.event.bus.AbstractEventBus;
+import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
 import io.graversen.fiber.server.websocket.management.WebSocketNetworkClient;
@@ -19,9 +20,9 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
 {
     private WsServer wsServer;
 
-    public AbstractWebSocketServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, EventBus eventBus)
+    public AbstractWebSocketServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, AbstractEventBus abstractEventBus)
     {
-        super(serverConfig, networkClientManager, eventBus);
+        super(serverConfig, networkClientManager, abstractEventBus);
         this.wsServer = new WsServer(this);
     }
 
@@ -48,7 +49,7 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
             e.printStackTrace();
         }
 
-        final ServerClosedEvent serverClosedEvent = new ServerClosedEvent(this);
+        final ServerClosedEvent serverClosedEvent = new ServerClosedEvent(this, reason);
         getEventBus().emitEvent(serverClosedEvent, true);
     }
 
@@ -130,8 +131,8 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
         @Override
         public void onError(WebSocket conn, Exception ex)
         {
-            // FIXME
-            ex.printStackTrace();
+            final ServerErrorEvent serverErrorEvent = new ServerErrorEvent(abstractWebSocketServer, ex);
+            getEventBus().emitEvent(serverErrorEvent, true);
         }
 
         @Override

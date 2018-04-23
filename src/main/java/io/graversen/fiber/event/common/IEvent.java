@@ -1,4 +1,4 @@
-package io.graversen.fiber.event;
+package io.graversen.fiber.event.common;
 
 import java.time.LocalDateTime;
 

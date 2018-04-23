@@ -1,7 +1,7 @@
 package io.graversen.fiber.test.event;
 
-import io.graversen.fiber.event.BaseEvent;
-import io.graversen.fiber.event.IEvent;
+import io.graversen.fiber.event.common.BaseEvent;
+import io.graversen.fiber.event.common.IEvent;
 
 public class IncrementEvent extends BaseEvent implements IEvent
 {

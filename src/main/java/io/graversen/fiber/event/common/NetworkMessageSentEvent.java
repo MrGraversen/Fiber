@@ -1,4 +1,4 @@
-package io.graversen.fiber.event;
+package io.graversen.fiber.event.common;
 
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;

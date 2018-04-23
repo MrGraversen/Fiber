@@ -88,5 +88,6 @@ Event - ClientDisconnectedEvent - 127.0.0.1:50623: java.lang.Exception: Until ne
 
 * Write JavaDoc
 * Write unit tests
+* Implement factories to reduce the amount of setup code required to bootstrap servers
 * Implement a UDP server
 * Probably (a lot) more

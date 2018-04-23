@@ -1,7 +1,5 @@
 package io.graversen.fiber.event;
 
-import io.graversen.fiber.server.management.INetworkClient;
-
 public abstract class AbstractNetworkClientEventListener
 {
     private final EventBus eventBus;
@@ -11,24 +9,30 @@ public abstract class AbstractNetworkClientEventListener
         this.eventBus = eventBus;
         this.eventBus.registerEventListener(ClientConnectedEvent.class, this.clientConnectedListener);
         this.eventBus.registerEventListener(ClientDisconnectedEvent.class, this.clientDisconnectedListener);
+        this.eventBus.registerEventListener(NetworkMessageReceivedEvent.class, this.networkMessageReceivedListener);
+        this.eventBus.registerEventListener(NetworkMessageSentEvent.class, this.networkMessageSentListener);
         this.eventBus.registerEventListener(ServerReadyEvent.class, this.serverReadyListener);
-
+        this.eventBus.registerEventListener(ServerClosedEvent.class, this.serverClosedListener);
     }
 
-    public abstract void onClientConnected(INetworkClient networkClient);
+    public abstract void onClientConnected(ClientConnectedEvent clientConnectedEvent);
 
-    public abstract void onClientDisconnected(INetworkClient networkClient);
+    public abstract void onClientDisconnected(ClientDisconnectedEvent clientDisconnectedEvent);
 
-    public abstract void onNetworkMessage();
+    public abstract void onNetworkMessageReceived(NetworkMessageReceivedEvent networkMessageReceivedEvent);
 
-    public abstract void onServerReady();
+    public abstract void onNetworkMessageSent(NetworkMessageSentEvent networkMessageSentEvent);
+
+    public abstract void onServerReady(ServerReadyEvent serverReadyEvent);
+
+    public abstract void onServerClosed(ServerClosedEvent serverClosedEvent);
 
     private final AbstractEventListener<ClientConnectedEvent> clientConnectedListener = new AbstractEventListener<ClientConnectedEvent>()
     {
         @Override
         public void onEvent(ClientConnectedEvent event)
         {
-            onClientConnected(event.getNetworkClient());
+            onClientConnected(event);
         }
     };
 
@@ -37,18 +41,43 @@ public abstract class AbstractNetworkClientEventListener
         @Override
         public void onEvent(ClientDisconnectedEvent event)
         {
-            onClientDisconnected(event.getNetworkClient());
+            onClientDisconnected(event);
         }
     };
 
-    // TODO network message
+    private final AbstractEventListener<NetworkMessageReceivedEvent> networkMessageReceivedListener = new AbstractEventListener<NetworkMessageReceivedEvent>()
+    {
+        @Override
+        public void onEvent(NetworkMessageReceivedEvent event)
+        {
+            onNetworkMessageReceived(event);
+        }
+    };
+
+    private final AbstractEventListener<NetworkMessageSentEvent> networkMessageSentListener = new AbstractEventListener<NetworkMessageSentEvent>()
+    {
+        @Override
+        public void onEvent(NetworkMessageSentEvent event)
+        {
+            onNetworkMessageSent(event);
+        }
+    };
 
     private final AbstractEventListener<ServerReadyEvent> serverReadyListener = new AbstractEventListener<ServerReadyEvent>()
     {
         @Override
         public void onEvent(ServerReadyEvent event)
         {
-            onServerReady();
+            onServerReady(event);
+        }
+    };
+
+    private final AbstractEventListener<ServerClosedEvent> serverClosedListener = new AbstractEventListener<ServerClosedEvent>()
+    {
+        @Override
+        public void onEvent(ServerClosedEvent event)
+        {
+            onServerClosed(event);
         }
     };
 }

@@ -4,11 +4,11 @@ import io.graversen.fiber.event.bus.AbstractEventBus;
 import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.event.listeners.AbstractEventListener;
 
-public abstract class AbstractNetworkClientEventListener
+public abstract class AbstractNetworkEventListener
 {
     private final AbstractEventBus abstractEventBus;
 
-    protected AbstractNetworkClientEventListener(AbstractEventBus abstractEventBus)
+    protected AbstractNetworkEventListener(AbstractEventBus abstractEventBus)
     {
         this.abstractEventBus = abstractEventBus;
         this.abstractEventBus.registerEventListener(ClientConnectedEvent.class, this.clientConnectedListener);

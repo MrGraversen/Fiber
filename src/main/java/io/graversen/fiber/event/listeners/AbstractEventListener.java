@@ -8,9 +8,7 @@ public abstract class AbstractEventListener<T extends IEvent>
     {
         try
         {
-            event.propagate();
             onEvent((T) event);
-            event.finish();
         }
         catch (Exception ex1)
         {

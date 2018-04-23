@@ -100,7 +100,14 @@ public class DefaultEventBus extends AbstractEventBus
                         while (eventQueue.peek() != null)
                         {
                             final IEvent event = eventQueue.poll();
-                            eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
+
+                            if (event != null)
+                            {
+                                event.propagate();
+                                eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
+                                event.finish();
+                            }
+
                             if (maxUniqueEventPropagation <= ++eventsPropagated) break;
                         }
                     }

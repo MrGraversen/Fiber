@@ -41,7 +41,7 @@ final TcpServerConfig tcpServerConfig = new AllNetworkInterfacesTcpServerConfig(
 final AbstractEventBus eventBus = new DefaultEventBus();
 
 // Declare an implementation of Network Client Manager
-final DefaultNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
+final AbstractNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
 
 // Bundle it all together to form a Simple TCP Server
 final AbstractNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);

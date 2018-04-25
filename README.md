@@ -1,12 +1,29 @@
 # Fiber
 _A Java networking library._
 
-[ ![Codeship Status for MrGraversen/Fiber](https://app.codeship.com/projects/f7eaf010-295b-0136-174e-0a7c6efe79c9/status?branch=master)](https://app.codeship.com/projects/287302)
+[ ![Codeship Status for MrGraversen/Fiber](https://app.codeship.com/projects/f7eaf010-295b-0136-174e-0a7c6efe79c9/status?branch=master)](https://app.codeship.com/projects/287302) [![](https://jitpack.io/v/MrGraversen/Fiber.svg)](https://jitpack.io/#MrGraversen/Fiber)
 
 ## Install
 
-Will add JitPack once this library matures a little.
+You may use JitPack to install this from the GitHub releases.  
+Add the following to your `pom.xml` if using Maven (click the little JitPack badge for other build systems):
 
+```
+<repositories>
+	<repository>
+		<id>jitpack.io</id>
+		<url>https://jitpack.io</url>
+	</repository>
+</repositories>
+```
+
+```
+<dependency>
+	<groupId>com.github.MrGraversen</groupId>
+	<artifactId>Fiber</artifactId>
+	<version>LATEST</version>
+</dependency>
+```
 ## What is Fiber?
 
 _Fiber_ is a close-to-zero-dependency networking library written in Java. It exposes a somewhat unopinionated interface to build networking servers.

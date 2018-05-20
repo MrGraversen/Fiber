@@ -7,6 +7,7 @@ import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
 import io.graversen.fiber.server.websocket.management.WebSocketNetworkClient;
 import org.java_websocket.WebSocket;
+import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -82,10 +83,15 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
     @Override
     public void send(INetworkClient networkClient, byte[] messageData)
     {
-        ((WebSocketNetworkClient) networkClient).getWebSocket().send(new String(messageData));
+        final WebSocketNetworkClient webSocketClient = (WebSocketNetworkClient) networkClient;
 
-        final NetworkMessageSentEvent networkMessageSentEvent = new NetworkMessageSentEvent(networkClient, new NetworkMessage(messageData));
-        getEventBus().emitEvent(networkMessageSentEvent, true);
+        if (webSocketClient.getWebSocket().isOpen())
+        {
+            webSocketClient.getWebSocket().send(new String(messageData));
+
+            final NetworkMessageSentEvent networkMessageSentEvent = new NetworkMessageSentEvent(networkClient, new NetworkMessage(messageData));
+            getEventBus().emitEvent(networkMessageSentEvent, true);
+        }
     }
 
     private class WsServer extends WebSocketServer

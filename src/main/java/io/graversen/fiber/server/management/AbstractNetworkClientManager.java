@@ -52,7 +52,6 @@ public abstract class AbstractNetworkClientManager
             final INetworkClient networkClient = clientStore.get(id);
             clientStore.remove(id);
             connectionTupleToIdStore.remove(networkClient.connectionTuple());
-            clientDataStore.remove(id);
 
             return true;
         }

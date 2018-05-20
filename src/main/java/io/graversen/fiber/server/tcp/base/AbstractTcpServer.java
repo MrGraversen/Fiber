@@ -9,6 +9,7 @@ import io.graversen.fiber.server.management.AbstractNetworkClientManager;
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
 import io.graversen.fiber.server.tcp.management.TcpNetworkClient;
+import io.graversen.fiber.util.NetworkUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -259,7 +260,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
 
                 final InetAddress socketAddress = socketChannel.socket().getInetAddress();
 
-                final String connectionTuple = String.format("%s:%d", socketAddress.getHostAddress(), socketChannel.socket().getPort());
+                final String connectionTuple = NetworkUtil.getConnectionTuple(socketAddress.getHostAddress(), socketChannel.socket().getPort());
                 final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
                 tcpNetworkClientByConnectionTuple.ifPresent(tcpNetworkClient -> {
@@ -278,7 +279,7 @@ public class AbstractTcpServer extends AbstractNetworkingServer
         {
             final SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
             final InetAddress socketAddress = socketChannel.socket().getInetAddress();
-            final String connectionTuple = String.format("%s:%d", socketAddress.getHostAddress(), socketChannel.socket().getPort());
+            final String connectionTuple = NetworkUtil.getConnectionTuple(socketAddress.getHostAddress(), socketChannel.socket().getPort());
             final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
             tcpNetworkClientByConnectionTuple.ifPresent(networkClient -> {
@@ -307,24 +308,27 @@ public class AbstractTcpServer extends AbstractNetworkingServer
         {
             final SocketChannel socketChannel = ((SocketChannel) selectionKey.channel());
             final InetAddress socketAddress = socketChannel.socket().getInetAddress();
+            final String connectionTuple = NetworkUtil.getConnectionTuple(socketAddress.getHostAddress(), socketChannel.socket().getPort());
+            final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
-            final TcpNetworkClient tcpNetworkClient = new TcpNetworkClient(socketChannel, selectionKey, socketAddress.getHostAddress(), socketChannel.socket().getPort());
-            getNetworkClientManager().deleteClient(tcpNetworkClient);
+            tcpNetworkClientByConnectionTuple.ifPresent(networkClient -> {
+                getNetworkClientManager().deleteClient(networkClient);
 
-            try
-            {
-                selectionKey.cancel();
-                selectionKey.channel().close();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+                try
+                {
+                    selectionKey.cancel();
+                    selectionKey.channel().close();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
 
-            if (reason instanceof CancelledKeyException) return;
+                if (reason instanceof CancelledKeyException) return;
 
-            final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(tcpNetworkClient, new IOException(reason));
-            getEventBus().emitEvent(clientDisconnectedEvent, true);
+                final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(networkClient, new IOException(reason));
+                getEventBus().emitEvent(clientDisconnectedEvent, true);
+            });
         }
 
         private byte[] trimByteArray(byte[] bytes)

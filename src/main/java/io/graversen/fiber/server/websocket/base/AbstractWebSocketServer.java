@@ -6,8 +6,8 @@ import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
 import io.graversen.fiber.server.websocket.management.WebSocketNetworkClient;
+import io.graversen.fiber.util.NetworkUtil;
 import org.java_websocket.WebSocket;
-import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -117,21 +117,27 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
         @Override
         public void onClose(WebSocket conn, int code, String reason, boolean remote)
         {
-            final WebSocketNetworkClient webSocketNetworkClient = new WebSocketNetworkClient(conn, conn.getRemoteSocketAddress().getHostName(), conn.getRemoteSocketAddress().getPort());
-            getNetworkClientManager().deleteClient(webSocketNetworkClient);
+            final Optional<INetworkClient> webSocketNetworkClient = getNetworkClientManager().getClientByConnectionTuple(getConnectionTuple(conn));
 
-            final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(webSocketNetworkClient, new IOException(reason));
-            getEventBus().emitEvent(clientDisconnectedEvent, true);
+            webSocketNetworkClient.ifPresent(networkClient -> {
+                getNetworkClientManager().deleteClient(networkClient);
+
+                final ClientDisconnectedEvent clientDisconnectedEvent = new ClientDisconnectedEvent(networkClient, new IOException(reason));
+                getEventBus().emitEvent(clientDisconnectedEvent, true);
+            });
         }
 
         @Override
         public void onMessage(WebSocket conn, String message)
         {
-            final WebSocketNetworkClient webSocketNetworkClient = new WebSocketNetworkClient(conn, conn.getRemoteSocketAddress().getHostName(), conn.getRemoteSocketAddress().getPort());
-            final NetworkMessage networkMessage = new NetworkMessage(message.getBytes());
+            final Optional<INetworkClient> webSocketNetworkClient = getNetworkClientManager().getClientByConnectionTuple(getConnectionTuple(conn));
 
-            final NetworkMessageReceivedEvent networkMessageReceivedEvent = new NetworkMessageReceivedEvent(webSocketNetworkClient, networkMessage);
-            getEventBus().emitEvent(networkMessageReceivedEvent, true);
+            webSocketNetworkClient.ifPresent(networkClient -> {
+                final NetworkMessage networkMessage = new NetworkMessage(message.getBytes());
+
+                final NetworkMessageReceivedEvent networkMessageReceivedEvent = new NetworkMessageReceivedEvent(networkClient, networkMessage);
+                getEventBus().emitEvent(networkMessageReceivedEvent, true);
+            });
         }
 
         @Override
@@ -146,6 +152,11 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
         {
             final ServerReadyEvent serverReadyEvent = new ServerReadyEvent(abstractWebSocketServer);
             getEventBus().emitEvent(serverReadyEvent, true);
+        }
+
+        private String getConnectionTuple(WebSocket webSocket)
+        {
+            return NetworkUtil.getConnectionTuple(webSocket.getRemoteSocketAddress().getHostName(), webSocket.getRemoteSocketAddress().getPort());
         }
     }
 }

@@ -1,5 +1,7 @@
 package io.graversen.fiber.server.management;
 
+import io.graversen.fiber.util.NetworkUtil;
+
 public interface INetworkClient
 {
     String id();
@@ -10,6 +12,6 @@ public interface INetworkClient
 
     default String connectionTuple()
     {
-        return String.format("%s:%d", ipAddress(), port());
+        return NetworkUtil.getConnectionTuple(ipAddress(), port());
     }
 }

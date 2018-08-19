@@ -89,7 +89,7 @@ eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new BaseEventL
 tcpServer.start();
 ```
 
-Running the example with just some random TCP client yields the following console output:
+Running the example with just some random TCP client (you can use `cURL`, `nc`, or something arcane if on Windows) yields the following console output:
 
 ```
 Event - ServerReadyEvent - /0.0.0.0:1337

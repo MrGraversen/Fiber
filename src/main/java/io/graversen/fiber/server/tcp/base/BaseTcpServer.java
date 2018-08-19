@@ -42,6 +42,7 @@ public class BaseTcpServer extends BaseNetworkingServer
         this.tcpSocketServerWrapper.start();
         this.eventLoopRunner.start();
 
+        getEventBus().start();
         final ServerReadyEvent serverReadyEvent = new ServerReadyEvent(this);
         getEventBus().emitEvent(serverReadyEvent, true);
     }

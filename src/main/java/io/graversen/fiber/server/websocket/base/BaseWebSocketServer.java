@@ -30,6 +30,7 @@ public abstract class BaseWebSocketServer extends BaseNetworkingServer
     @Override
     public void start()
     {
+        getEventBus().start();
         this.wsServer.start();
     }
 

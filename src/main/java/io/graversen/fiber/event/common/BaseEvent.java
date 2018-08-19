@@ -49,7 +49,8 @@ public class BaseEvent implements IEvent
         if (this.eventPropagatedAt == null)
         {
             this.eventPropagatedAt = LocalDateTime.now();
-        } else
+        }
+        else
         {
             throw new RuntimeException("Event already propagated!");
         }
@@ -61,7 +62,8 @@ public class BaseEvent implements IEvent
         if (this.eventFinishedExecutionAt == null)
         {
             this.eventFinishedExecutionAt = LocalDateTime.now();
-        } else
+        }
+        else
         {
             throw new RuntimeException("Event already finished!");
         }

@@ -16,4 +16,12 @@ public interface IEventBus
     void emitEvent(IEvent event, boolean requiresPropagation);
 
     int getThreadPoolSize();
+
+    void start();
+
+    void pause();
+
+    void resume();
+
+    void stop();
 }

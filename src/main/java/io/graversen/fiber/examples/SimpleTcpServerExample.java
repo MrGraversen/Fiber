@@ -2,7 +2,7 @@ package io.graversen.fiber.examples;
 
 import io.graversen.fiber.config.tcp.AllNetworkInterfacesTcpServerConfig;
 import io.graversen.fiber.config.tcp.TcpServerConfig;
-import io.graversen.fiber.event.bus.AbstractEventBus;
+import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.bus.DefaultEventBus;
 import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.event.listeners.AbstractEventListener;
@@ -20,7 +20,7 @@ public class SimpleTcpServerExample
         final TcpServerConfig tcpServerConfig = new AllNetworkInterfacesTcpServerConfig(1337);
 
         // Declare an implementation of the Event Bus
-        final AbstractEventBus eventBus = new DefaultEventBus();
+        final IEventBus eventBus = new DefaultEventBus();
 
         // Declare an implementation of Network Client Manager
         final AbstractNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
@@ -54,7 +54,7 @@ public class SimpleTcpServerExample
         tcpServer.start();
     }
 
-    private static AbstractNetworkEventListener networkClientEventListener(AbstractEventBus eventBus)
+    private static AbstractNetworkEventListener networkClientEventListener(IEventBus eventBus)
     {
         return new AbstractNetworkEventListener(eventBus)
         {

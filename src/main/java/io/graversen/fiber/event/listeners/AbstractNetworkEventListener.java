@@ -1,22 +1,21 @@
 package io.graversen.fiber.event.listeners;
 
-import io.graversen.fiber.event.bus.AbstractEventBus;
+import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
-import io.graversen.fiber.event.listeners.AbstractEventListener;
 
 public abstract class AbstractNetworkEventListener
 {
-    private final AbstractEventBus abstractEventBus;
+    private final IEventBus eventBus;
 
-    protected AbstractNetworkEventListener(AbstractEventBus abstractEventBus)
+    protected AbstractNetworkEventListener(IEventBus eventBus)
     {
-        this.abstractEventBus = abstractEventBus;
-        this.abstractEventBus.registerEventListener(ClientConnectedEvent.class, this.clientConnectedListener);
-        this.abstractEventBus.registerEventListener(ClientDisconnectedEvent.class, this.clientDisconnectedListener);
-        this.abstractEventBus.registerEventListener(NetworkMessageReceivedEvent.class, this.networkMessageReceivedListener);
-        this.abstractEventBus.registerEventListener(NetworkMessageSentEvent.class, this.networkMessageSentListener);
-        this.abstractEventBus.registerEventListener(ServerReadyEvent.class, this.serverReadyListener);
-        this.abstractEventBus.registerEventListener(ServerClosedEvent.class, this.serverClosedListener);
+        this.eventBus = eventBus;
+        this.eventBus.registerEventListener(ClientConnectedEvent.class, this.clientConnectedListener);
+        this.eventBus.registerEventListener(ClientDisconnectedEvent.class, this.clientDisconnectedListener);
+        this.eventBus.registerEventListener(NetworkMessageReceivedEvent.class, this.networkMessageReceivedListener);
+        this.eventBus.registerEventListener(NetworkMessageSentEvent.class, this.networkMessageSentListener);
+        this.eventBus.registerEventListener(ServerReadyEvent.class, this.serverReadyListener);
+        this.eventBus.registerEventListener(ServerClosedEvent.class, this.serverClosedListener);
     }
 
     public abstract void onClientConnected(ClientConnectedEvent clientConnectedEvent);

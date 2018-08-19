@@ -1,7 +1,7 @@
 package io.graversen.fiber.server.websocket.base;
 
 import io.graversen.fiber.config.base.ServerConfig;
-import io.graversen.fiber.event.bus.AbstractEventBus;
+import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
@@ -21,9 +21,9 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
 {
     private WsServer wsServer;
 
-    public AbstractWebSocketServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, AbstractEventBus abstractEventBus)
+    public AbstractWebSocketServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, IEventBus eventBus)
     {
-        super(serverConfig, networkClientManager, abstractEventBus);
+        super(serverConfig, networkClientManager, eventBus);
         this.wsServer = new WsServer(this);
     }
 

@@ -1,7 +1,7 @@
 package io.graversen.fiber.server.tcp.base;
 
 import io.graversen.fiber.config.tcp.TcpServerConfig;
-import io.graversen.fiber.event.bus.AbstractEventBus;
+import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.server.async.DefaultThreadFactory;
 import io.graversen.fiber.server.base.AbstractNetworkingServer;
@@ -27,9 +27,9 @@ public class AbstractTcpServer extends AbstractNetworkingServer
     private final Thread eventLoopRunner;
     private final TcpServerConfig serverConfig;
 
-    public AbstractTcpServer(TcpServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, AbstractEventBus abstractEventBus)
+    public AbstractTcpServer(TcpServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, IEventBus eventBus)
     {
-        super(serverConfig, networkClientManager, abstractEventBus);
+        super(serverConfig, networkClientManager, eventBus);
         this.serverConfig = serverConfig;
         this.tcpSocketServerWrapper = new TcpSocketServerWrapper(this);
         this.threadFactory = new DefaultThreadFactory(getClass().getSimpleName());

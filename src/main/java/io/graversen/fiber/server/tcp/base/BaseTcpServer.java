@@ -4,8 +4,8 @@ import io.graversen.fiber.config.tcp.TcpServerConfig;
 import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
 import io.graversen.fiber.server.async.DefaultThreadFactory;
-import io.graversen.fiber.server.base.AbstractNetworkingServer;
-import io.graversen.fiber.server.management.AbstractNetworkClientManager;
+import io.graversen.fiber.server.base.BaseNetworkingServer;
+import io.graversen.fiber.server.management.BaseNetworkClientManager;
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
 import io.graversen.fiber.server.tcp.management.TcpNetworkClient;
@@ -20,14 +20,14 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.ThreadFactory;
 
-public class AbstractTcpServer extends AbstractNetworkingServer
+public class BaseTcpServer extends BaseNetworkingServer
 {
     private final TcpSocketServerWrapper tcpSocketServerWrapper;
     private final ThreadFactory threadFactory;
     private final Thread eventLoopRunner;
     private final TcpServerConfig serverConfig;
 
-    public AbstractTcpServer(TcpServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, IEventBus eventBus)
+    public BaseTcpServer(TcpServerConfig serverConfig, BaseNetworkClientManager networkClientManager, IEventBus eventBus)
     {
         super(serverConfig, networkClientManager, eventBus);
         this.serverConfig = serverConfig;
@@ -109,12 +109,12 @@ public class AbstractTcpServer extends AbstractNetworkingServer
 
     private class TcpSocketServerWrapper
     {
-        private final AbstractTcpServer abstractTcpServer;
+        private final BaseTcpServer abstractTcpServer;
 
         private final ServerSocketChannel serverSocketChannel;
         private final Selector defaultSelector;
 
-        public TcpSocketServerWrapper(AbstractTcpServer abstractTcpServer)
+        public TcpSocketServerWrapper(BaseTcpServer abstractTcpServer)
         {
             try
             {

@@ -52,7 +52,7 @@ public class BaseEvent implements IEvent
         }
         else
         {
-            throw new RuntimeException("Event already propagated!");
+            throw new IllegalStateException(String.format("%s already propagated!", getClass().getSimpleName()));
         }
     }
 
@@ -65,7 +65,7 @@ public class BaseEvent implements IEvent
         }
         else
         {
-            throw new RuntimeException("Event already finished!");
+            throw new IllegalStateException(String.format("%s already finished!", getClass().getSimpleName()));
         }
     }
 }

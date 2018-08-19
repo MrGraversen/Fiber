@@ -3,6 +3,8 @@ package io.graversen.fiber.server.websocket.base;
 import io.graversen.fiber.config.base.ServerConfig;
 import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
+import io.graversen.fiber.server.base.BaseNetworkingServer;
+import io.graversen.fiber.server.management.BaseNetworkClientManager;
 import io.graversen.fiber.server.management.INetworkClient;
 import io.graversen.fiber.server.management.NetworkMessage;
 import io.graversen.fiber.server.websocket.management.WebSocketNetworkClient;
@@ -11,17 +13,15 @@ import org.java_websocket.WebSocket;
 import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
-import io.graversen.fiber.server.base.AbstractNetworkingServer;
-import io.graversen.fiber.server.management.AbstractNetworkClientManager;
 
 import java.io.IOException;
 import java.util.Optional;
 
-public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
+public abstract class BaseWebSocketServer extends BaseNetworkingServer
 {
     private WsServer wsServer;
 
-    public AbstractWebSocketServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, IEventBus eventBus)
+    public BaseWebSocketServer(ServerConfig serverConfig, BaseNetworkClientManager networkClientManager, IEventBus eventBus)
     {
         super(serverConfig, networkClientManager, eventBus);
         this.wsServer = new WsServer(this);
@@ -96,9 +96,9 @@ public abstract class AbstractWebSocketServer extends AbstractNetworkingServer
 
     private class WsServer extends WebSocketServer
     {
-        private final AbstractWebSocketServer abstractWebSocketServer;
+        private final BaseWebSocketServer abstractWebSocketServer;
 
-        public WsServer(AbstractWebSocketServer abstractWebSocketServer)
+        public WsServer(BaseWebSocketServer abstractWebSocketServer)
         {
             super(abstractWebSocketServer.getServerConfig().getServerAddress());
             this.abstractWebSocketServer = abstractWebSocketServer;

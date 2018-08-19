@@ -5,23 +5,24 @@ import java.util.concurrent.ThreadFactory;
 public final class DefaultThreadFactory implements ThreadFactory
 {
     private final String groupName;
-    private int threadCount;
+
+    private int currentThreadCount;
 
     public DefaultThreadFactory(String groupName)
     {
         this.groupName = groupName;
-        this.threadCount = 0;
+        this.currentThreadCount = 0;
     }
 
     @Override
     public Thread newThread(Runnable r)
     {
-        threadCount++;
+        currentThreadCount++;
         return new Thread(r, getName());
     }
 
     private String getName()
     {
-        return String.format("%s-Worker-%d", groupName, threadCount);
+        return String.format("%s-Worker-%d", groupName, currentThreadCount);
     }
 }

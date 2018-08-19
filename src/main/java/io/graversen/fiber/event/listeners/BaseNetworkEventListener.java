@@ -3,11 +3,11 @@ package io.graversen.fiber.event.listeners;
 import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
 
-public abstract class AbstractNetworkEventListener
+public abstract class BaseNetworkEventListener
 {
     private final IEventBus eventBus;
 
-    protected AbstractNetworkEventListener(IEventBus eventBus)
+    protected BaseNetworkEventListener(IEventBus eventBus)
     {
         this.eventBus = eventBus;
         this.eventBus.registerEventListener(ClientConnectedEvent.class, this.clientConnectedListener);
@@ -30,7 +30,7 @@ public abstract class AbstractNetworkEventListener
 
     public abstract void onServerClosed(ServerClosedEvent serverClosedEvent);
 
-    private final AbstractEventListener<ClientConnectedEvent> clientConnectedListener = new AbstractEventListener<ClientConnectedEvent>()
+    private final BaseEventListener<ClientConnectedEvent> clientConnectedListener = new BaseEventListener<ClientConnectedEvent>()
     {
         @Override
         public void onEvent(ClientConnectedEvent event)
@@ -39,7 +39,7 @@ public abstract class AbstractNetworkEventListener
         }
     };
 
-    private final AbstractEventListener<ClientDisconnectedEvent> clientDisconnectedListener = new AbstractEventListener<ClientDisconnectedEvent>()
+    private final BaseEventListener<ClientDisconnectedEvent> clientDisconnectedListener = new BaseEventListener<ClientDisconnectedEvent>()
     {
         @Override
         public void onEvent(ClientDisconnectedEvent event)
@@ -48,7 +48,7 @@ public abstract class AbstractNetworkEventListener
         }
     };
 
-    private final AbstractEventListener<NetworkMessageReceivedEvent> networkMessageReceivedListener = new AbstractEventListener<NetworkMessageReceivedEvent>()
+    private final BaseEventListener<NetworkMessageReceivedEvent> networkMessageReceivedListener = new BaseEventListener<NetworkMessageReceivedEvent>()
     {
         @Override
         public void onEvent(NetworkMessageReceivedEvent event)
@@ -57,7 +57,7 @@ public abstract class AbstractNetworkEventListener
         }
     };
 
-    private final AbstractEventListener<NetworkMessageSentEvent> networkMessageSentListener = new AbstractEventListener<NetworkMessageSentEvent>()
+    private final BaseEventListener<NetworkMessageSentEvent> networkMessageSentListener = new BaseEventListener<NetworkMessageSentEvent>()
     {
         @Override
         public void onEvent(NetworkMessageSentEvent event)
@@ -66,7 +66,7 @@ public abstract class AbstractNetworkEventListener
         }
     };
 
-    private final AbstractEventListener<ServerReadyEvent> serverReadyListener = new AbstractEventListener<ServerReadyEvent>()
+    private final BaseEventListener<ServerReadyEvent> serverReadyListener = new BaseEventListener<ServerReadyEvent>()
     {
         @Override
         public void onEvent(ServerReadyEvent event)
@@ -75,7 +75,7 @@ public abstract class AbstractNetworkEventListener
         }
     };
 
-    private final AbstractEventListener<ServerClosedEvent> serverClosedListener = new AbstractEventListener<ServerClosedEvent>()
+    private final BaseEventListener<ServerClosedEvent> serverClosedListener = new BaseEventListener<ServerClosedEvent>()
     {
         @Override
         public void onEvent(ServerClosedEvent event)

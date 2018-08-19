@@ -2,32 +2,25 @@ package io.graversen.fiber.server.base;
 
 import io.graversen.fiber.config.base.ServerConfig;
 import io.graversen.fiber.event.bus.IEventBus;
-import io.graversen.fiber.server.management.AbstractNetworkClientManager;
+import io.graversen.fiber.server.management.BaseNetworkClientManager;
 import io.graversen.fiber.server.management.INetworkClient;
 
-public abstract class AbstractNetworkingServer
+public abstract class BaseNetworkingServer
 {
-    private final AbstractNetworkClientManager networkClientManager;
+    private final BaseNetworkClientManager networkClientManager;
     private final IEventBus eventBus;
     private final ServerConfig serverConfig;
 
-    public AbstractNetworkingServer(ServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, IEventBus eventBus)
+    public BaseNetworkingServer(ServerConfig serverConfig, BaseNetworkClientManager networkClientManager, IEventBus eventBus)
     {
         this.serverConfig = serverConfig;
         this.networkClientManager = networkClientManager;
         this.eventBus = eventBus;
 
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable()
-        {
-            public void run()
-            {
-                System.out.println(String.format("JVM Shutdown Hook - %s", getClass().getSimpleName()));
-                stop(new RuntimeException("Server Closing"), true);
-            }
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> stop(new RuntimeException("Server Closing"), true)));
     }
 
-    public AbstractNetworkClientManager getNetworkClientManager()
+    public BaseNetworkClientManager getNetworkClientManager()
     {
         return networkClientManager;
     }

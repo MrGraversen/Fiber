@@ -1,7 +1,7 @@
 package io.graversen.fiber.event.bus;
 
-import io.graversen.fiber.event.listeners.AbstractEventListener;
 import io.graversen.fiber.event.common.IEvent;
+import io.graversen.fiber.event.listeners.BaseEventListener;
 import io.graversen.fiber.server.async.DefaultThreadPool;
 import io.graversen.fiber.util.Constants;
 import io.graversen.fiber.util.Environment;
@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 public class DefaultEventBus implements IEventBus
 {
     private final ThreadPoolExecutor threadPoolExecutor;
-    private final Map<Class<? extends IEvent>, List<AbstractEventListener<? extends IEvent>>> eventListenerStore;
+    private final Map<Class<? extends IEvent>, List<BaseEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
     private final Map<Integer, EventPropagator> eventPropagatorStore;
     private final AtomicInteger eventPropagatorRoundRobin;
@@ -39,14 +39,14 @@ public class DefaultEventBus implements IEventBus
     @Override
     public boolean hasEventListener(Class<? extends IEvent> eventClass)
     {
-        final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
+        final List<BaseEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
         return !eventListeners.isEmpty();
     }
 
     @Override
-    public void registerEventListener(Class<? extends IEvent> eventClass, AbstractEventListener<? extends IEvent> eventListener)
+    public void registerEventListener(Class<? extends IEvent> eventClass, BaseEventListener<? extends IEvent> eventListener)
     {
-        final List<AbstractEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
+        final List<BaseEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
         eventListeners.add(eventListener);
 
         this.eventListenerStore.put(eventClass, eventListeners);
@@ -66,7 +66,7 @@ public class DefaultEventBus implements IEventBus
     @Override
     public void emitEvent(IEvent event, boolean requiresPropagation)
     {
-        final List<AbstractEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
+        final List<BaseEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
 
         if ((event.requiresPropagation() || requiresPropagation) && eventListeners.isEmpty())
         {

@@ -2,13 +2,13 @@ package io.graversen.fiber.examples;
 
 import io.graversen.fiber.config.tcp.AllNetworkInterfacesTcpServerConfig;
 import io.graversen.fiber.config.tcp.TcpServerConfig;
-import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.bus.DefaultEventBus;
+import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
-import io.graversen.fiber.event.listeners.AbstractEventListener;
-import io.graversen.fiber.event.listeners.AbstractNetworkEventListener;
-import io.graversen.fiber.server.base.AbstractNetworkingServer;
-import io.graversen.fiber.server.management.AbstractNetworkClientManager;
+import io.graversen.fiber.event.listeners.BaseEventListener;
+import io.graversen.fiber.event.listeners.BaseNetworkEventListener;
+import io.graversen.fiber.server.base.BaseNetworkingServer;
+import io.graversen.fiber.server.management.BaseNetworkClientManager;
 import io.graversen.fiber.server.management.DefaultNetworkClientManager;
 import io.graversen.fiber.server.tcp.SimpleTcpServer;
 
@@ -23,16 +23,16 @@ public class SimpleTcpServerExample
         final IEventBus eventBus = new DefaultEventBus();
 
         // Declare an implementation of Network Client Manager
-        final AbstractNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
+        final BaseNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
 
         // Bundle it all together to form a Simple TCP Server
-        final AbstractNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
+        final BaseNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
 
         // Add a Network Event Listener to the Event Bus - it will just print events to System.out
         networkClientEventListener(eventBus);
 
         // Let's add another listener to the Event Bus, for the NetworkMessageReceivedEvent, exposing a small protocol to the network
-        eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new AbstractEventListener<NetworkMessageReceivedEvent>()
+        eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new BaseEventListener<NetworkMessageReceivedEvent>()
         {
             @Override
             public void onEvent(NetworkMessageReceivedEvent event)
@@ -54,9 +54,9 @@ public class SimpleTcpServerExample
         tcpServer.start();
     }
 
-    private static AbstractNetworkEventListener networkClientEventListener(IEventBus eventBus)
+    private static BaseNetworkEventListener networkClientEventListener(IEventBus eventBus)
     {
-        return new AbstractNetworkEventListener(eventBus)
+        return new BaseNetworkEventListener(eventBus)
         {
             @Override
             public void onClientConnected(ClientConnectedEvent event)

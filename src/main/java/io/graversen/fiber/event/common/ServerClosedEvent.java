@@ -1,19 +1,19 @@
 package io.graversen.fiber.event.common;
 
-import io.graversen.fiber.server.base.AbstractNetworkingServer;
+import io.graversen.fiber.server.base.BaseNetworkingServer;
 
 public class ServerClosedEvent extends BaseEvent implements IEvent
 {
-    private final AbstractNetworkingServer networkingServer;
+    private final BaseNetworkingServer networkingServer;
     private final Exception reason;
 
-    public ServerClosedEvent(AbstractNetworkingServer networkingServer, Exception reason)
+    public ServerClosedEvent(BaseNetworkingServer networkingServer, Exception reason)
     {
         this.networkingServer = networkingServer;
         this.reason = reason;
     }
 
-    public AbstractNetworkingServer getNetworkingServer()
+    public BaseNetworkingServer getNetworkingServer()
     {
         return networkingServer;
     }

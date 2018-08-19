@@ -2,12 +2,12 @@ package io.graversen.fiber.server.tcp;
 
 import io.graversen.fiber.config.tcp.TcpServerConfig;
 import io.graversen.fiber.event.bus.IEventBus;
-import io.graversen.fiber.server.management.AbstractNetworkClientManager;
-import io.graversen.fiber.server.tcp.base.AbstractTcpServer;
+import io.graversen.fiber.server.management.BaseNetworkClientManager;
+import io.graversen.fiber.server.tcp.base.BaseTcpServer;
 
-public class SimpleTcpServer extends AbstractTcpServer
+public class SimpleTcpServer extends BaseTcpServer
 {
-    public SimpleTcpServer(TcpServerConfig serverConfig, AbstractNetworkClientManager networkClientManager, IEventBus eventBus)
+    public SimpleTcpServer(TcpServerConfig serverConfig, BaseNetworkClientManager networkClientManager, IEventBus eventBus)
     {
         super(serverConfig, networkClientManager, eventBus);
     }

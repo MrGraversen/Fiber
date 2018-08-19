@@ -1,14 +1,12 @@
 package io.graversen.fiber.test.event;
 
-import io.graversen.fiber.event.bus.IEventBus;
-import io.graversen.fiber.event.listeners.AbstractEventListener;
 import io.graversen.fiber.event.bus.DefaultEventBus;
+import io.graversen.fiber.event.bus.IEventBus;
+import io.graversen.fiber.event.listeners.BaseEventListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.IntStream;
 
@@ -32,7 +30,7 @@ class DefaultEventBusTest
         final int eventCount = 1_000_000;
         final int eventSkipPrintCount = 100;
 
-        eventBus.registerEventListener(PrintEvent.class, new AbstractEventListener<PrintEvent>()
+        eventBus.registerEventListener(PrintEvent.class, new BaseEventListener<PrintEvent>()
         {
             @Override
             public void onEvent(PrintEvent event)
@@ -48,7 +46,7 @@ class DefaultEventBusTest
             }
         });
 
-        eventBus.registerEventListener(IncrementEvent.class, new AbstractEventListener<IncrementEvent>()
+        eventBus.registerEventListener(IncrementEvent.class, new BaseEventListener<IncrementEvent>()
         {
             @Override
             public void onEvent(IncrementEvent event)

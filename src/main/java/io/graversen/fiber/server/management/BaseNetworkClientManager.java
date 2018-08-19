@@ -3,13 +3,13 @@ package io.graversen.fiber.server.management;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public abstract class AbstractNetworkClientManager
+public abstract class BaseNetworkClientManager
 {
     private final Map<String, INetworkClient> clientStore;
     private final Map<String, String> connectionTupleToIdStore;
     private final Map<String, Map<String, String>> clientDataStore;
 
-    public AbstractNetworkClientManager()
+    public BaseNetworkClientManager()
     {
         this.clientStore = new ConcurrentHashMap<>();
         this.connectionTupleToIdStore = new ConcurrentHashMap<>();

@@ -1,24 +1,24 @@
 package io.graversen.fiber.event.common;
 
-import io.graversen.fiber.server.base.AbstractNetworkingServer;
+import io.graversen.fiber.server.base.BaseNetworkingServer;
 
 public class ServerReadyEvent extends BaseEvent implements IEvent
 {
-    private final AbstractNetworkingServer abstractNetworkingServer;
+    private final BaseNetworkingServer baseNetworkingServer;
 
-    public ServerReadyEvent(AbstractNetworkingServer abstractNetworkingServer)
+    public ServerReadyEvent(BaseNetworkingServer baseNetworkingServer)
     {
-        this.abstractNetworkingServer = abstractNetworkingServer;
+        this.baseNetworkingServer = baseNetworkingServer;
     }
 
-    public AbstractNetworkingServer getAbstractNetworkingServer()
+    public BaseNetworkingServer getBaseNetworkingServer()
     {
-        return abstractNetworkingServer;
+        return baseNetworkingServer;
     }
 
     @Override
     public void print()
     {
-        System.out.println(String.format("Event - %s - %s", getClass().getSimpleName(), abstractNetworkingServer.getServerConfig().getServerAddress().toString()));
+        System.out.println(String.format("Event - %s - %s", getClass().getSimpleName(), baseNetworkingServer.getServerConfig().getServerAddress().toString()));
     }
 }

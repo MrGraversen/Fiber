@@ -56,10 +56,10 @@ public final class TcpNetworkClient implements INetworkClient
     {
         final List<NetworkMessage> networkMessages = new ArrayList<>();
 
-        Optional<NetworkMessage> networkMessage = Optional.empty();
-        while ((networkMessage = pollFromNetworkQueue()).isPresent())
+        NetworkMessage networkMessage;
+        while ((networkMessage = networkWriteQueue.poll()) != null)
         {
-            networkMessages.add(networkMessage.get());
+            networkMessages.add(networkMessage);
         }
 
         return networkMessages;

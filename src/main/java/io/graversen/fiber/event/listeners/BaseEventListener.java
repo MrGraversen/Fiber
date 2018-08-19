@@ -2,7 +2,7 @@ package io.graversen.fiber.event.listeners;
 
 import io.graversen.fiber.event.common.IEvent;
 
-public abstract class AbstractEventListener<T extends IEvent>
+public abstract class BaseEventListener<T extends IEvent>
 {
     public void propagateEvent(IEvent event)
     {

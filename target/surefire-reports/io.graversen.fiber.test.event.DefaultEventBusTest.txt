@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: io.graversen.fiber.test.event.DefaultEventBusTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.079 sec - in io.graversen.fiber.test.event.DefaultEventBusTest

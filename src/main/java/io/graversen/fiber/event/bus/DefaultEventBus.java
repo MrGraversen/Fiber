@@ -11,22 +11,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 public class DefaultEventBus implements IEventBus
 {
-    private final ExecutorService executorService;
+    private final ThreadPoolExecutor threadPoolExecutor;
     private final Map<Class<? extends IEvent>, List<AbstractEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
-    private final EventPropagator eventPropagator;
+    private final Map<Integer, EventPropagator> eventPropagatorStore;
+    private final AtomicInteger eventPropagatorRoundRobin;
+    private final int threadPoolSize;
+
+    private volatile boolean pause;
 
     public DefaultEventBus()
     {
-        this.executorService = new DefaultThreadPool(getThreadPoolSize(), getClass().getSimpleName());
+        this.threadPoolSize = getThreadPoolSize();
+        this.threadPoolExecutor = new DefaultThreadPool(threadPoolSize, getClass().getSimpleName());
         this.eventListenerStore = new ConcurrentHashMap<>();
         this.eventQueueStore = new ConcurrentHashMap<>();
-        this.eventPropagator = new EventPropagator();
-        this.executorService.execute(eventPropagator);
+        this.eventPropagatorStore = new ConcurrentHashMap<>();
+        this.eventPropagatorRoundRobin = new AtomicInteger(1);
     }
 
     @Override
@@ -70,10 +77,18 @@ public class DefaultEventBus implements IEventBus
         eventQueue.add(event);
 
         eventQueueStore.put(event.getClass(), eventQueue);
+        provokeNextEventPropagator();
+    }
 
-        synchronized (eventPropagator.LOCK)
+    private void provokeNextEventPropagator()
+    {
+        int propagator = eventPropagatorRoundRobin.incrementAndGet();
+        if (propagator > threadPoolSize) propagator = 1;
+
+        final EventPropagator nextEventPropagator = eventPropagatorStore.get(propagator);
+        synchronized (nextEventPropagator.LOCK)
         {
-            eventPropagator.LOCK.notify();
+            nextEventPropagator.LOCK.notify();
         }
     }
 
@@ -83,9 +98,38 @@ public class DefaultEventBus implements IEventBus
         return Environment.availableProcessors();
     }
 
+    @Override
+    public void start()
+    {
+        IntStream.rangeClosed(1, threadPoolSize).forEach(i ->
+        {
+            final EventPropagator eventPropagator = new EventPropagator();
+            eventPropagatorStore.put(i, eventPropagator);
+            threadPoolExecutor.execute(eventPropagator);
+        });
+    }
+
+    @Override
+    public void pause()
+    {
+        pause = true;
+    }
+
+    @Override
+    public void resume()
+    {
+        pause = false;
+    }
+
+    @Override
+    public void stop()
+    {
+        threadPoolExecutor.shutdown();
+    }
+
     private class EventPropagator implements Runnable
     {
-        private final Object LOCK = new Object();
+        final Object LOCK = new Object();
 
         @Override
         public void run()
@@ -94,23 +138,26 @@ public class DefaultEventBus implements IEventBus
             {
                 while (!Thread.currentThread().isInterrupted())
                 {
-                    for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet())
+                    if (!pause)
                     {
-                        final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.getOrDefault(eventClass, new ConcurrentLinkedQueue<>());
-
-                        int eventsPropagated = 0;
-                        while (eventQueue.peek() != null)
+                        for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet())
                         {
-                            final IEvent event = eventQueue.poll();
+                            final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.getOrDefault(eventClass, new ConcurrentLinkedQueue<>());
 
-                            if (event != null)
+                            int eventsPropagated = 0;
+                            while (eventQueue.peek() != null)
                             {
-                                event.propagate();
-                                eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
-                                event.finish();
-                            }
+                                final IEvent event = eventQueue.poll();
 
-                            if (Constants.MAX_UNIQUE_SEQUENTIAL_EVENTS <= ++eventsPropagated) break;
+                                if (event != null)
+                                {
+                                    event.propagate();
+                                    eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
+                                    event.finish();
+                                }
+
+                                if (Constants.MAX_UNIQUE_SEQUENTIAL_EVENTS <= ++eventsPropagated) break;
+                            }
                         }
                     }
 

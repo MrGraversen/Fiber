@@ -7,25 +7,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.stream.IntStream;
 
 class DefaultEventBusTest
 {
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+
     private IEventBus eventBus;
 
     @BeforeEach
     void setUp()
     {
         eventBus = new DefaultEventBus();
+        eventBus.start();
     }
 
     @Test
     @Disabled
     void testPerformance1() throws InterruptedException
     {
-        final int eventCount = 10000000;
-        final int eventSkipPrintCount = 1000;
+        final int eventCount = 1_000_000;
+        final int eventSkipPrintCount = 100;
 
         eventBus.registerEventListener(PrintEvent.class, new AbstractEventListener<PrintEvent>()
         {
@@ -37,7 +42,8 @@ class DefaultEventBusTest
                 if (x % eventSkipPrintCount == 0)
                 {
                     final String threadName = Thread.currentThread().getName();
-                    System.out.println(String.format("PrintEvent (Thread: %s) (Emit: %d) (Propagated: %d): %d", threadName, event.eventEmittedAt().toEpochSecond(ZoneOffset.UTC), event.eventPropagatedAt().toEpochSecond(ZoneOffset.UTC), x));
+                    System.out.println(String.format("PrintEvent (Thread: %s) (Propagate Delay: %d) (Execute Duration: %d) \t x = %d", threadName, event.eventPropagationDelay(), event.eventExecutionDuration(), event.getX()));
+//                    System.out.println(String.format("PrintEvent (Thread: %s) (Emit: %s) (Propagated: %s): %d", threadName, event.eventEmittedAt().format(dateTimeFormatter), event.eventPropagatedAt().format(dateTimeFormatter), x));
                 }
             }
         });
@@ -49,6 +55,13 @@ class DefaultEventBusTest
             {
                 final int x = event.getX();
                 eventBus.emitEvent(new PrintEvent(x));
+
+                if (x % eventSkipPrintCount == 0)
+                {
+                    final String threadName = Thread.currentThread().getName();
+                    System.out.println(String.format("IncrementEvent (Thread: %s) (Propagate Delay: %d) (Execute Duration: %d) \t x = %d", threadName, event.eventPropagationDelay(), event.eventExecutionDuration(), event.getX()));
+//                    System.out.println(String.format("IncrementEvent (Thread: %s) (Emit: %s) (Propagated: %s): %d", threadName, event.eventEmittedAt().format(dateTimeFormatter), event.eventPropagatedAt().format(dateTimeFormatter), x));
+                }
             }
         });
 

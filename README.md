@@ -55,34 +55,34 @@ The following example is also found in the `io.graversen.fiber.examples.SimpleTc
 final TcpServerConfig tcpServerConfig = new AllNetworkInterfacesTcpServerConfig(1337);
 
 // Declare an implementation of the Event Bus
-final AbstractEventBus eventBus = new DefaultEventBus();
+final IEventBus eventBus = new DefaultEventBus();
 
 // Declare an implementation of Network Client Manager
-final AbstractNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
+final BaseNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
 
 // Bundle it all together to form a Simple TCP Server
-final AbstractNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
+final BaseNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
 
 // Add a Network Event Listener to the Event Bus - it will just print events to System.out
 networkClientEventListener(eventBus);
 
 // Let's add another listener to the Event Bus, for the NetworkMessageReceivedEvent, exposing a small protocol to the network
-eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new AbstractEventListener<NetworkMessageReceivedEvent>()
+eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new BaseEventListener<NetworkMessageReceivedEvent>()
 {
-	@Override
-	public void onEvent(NetworkMessageReceivedEvent event)
-	{
-		final String message = new String(event.getNetworkMessage().getMessageData());
+    @Override
+    public void onEvent(NetworkMessageReceivedEvent event)
+    {
+        final String message = new String(event.getNetworkMessage().getMessageData());
 
-		if ("Hello".equals(message))
-		{
-			tcpServer.send(event.getNetworkClient(), "World".getBytes());
-		}
-		else if ("Bye".equals(message))
-		{
-			tcpServer.stop(new Exception("Until next time!"), true);
-		}
-	}
+        if ("Hello".equals(message))
+        {
+            tcpServer.send(event.getNetworkClient(), "World".getBytes());
+        }
+        else if ("Bye".equals(message))
+        {
+            tcpServer.stop(new Exception("Until next time!"), true);
+        }
+    }
 });
 
 // Let's go!

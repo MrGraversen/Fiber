@@ -52,25 +52,32 @@ The following example is also found in the `io.graversen.fiber.examples.SimpleTc
 
 ```java
 // First, let's configure the TCP server instance - will listen on port 1337
-final TcpServerConfig tcpServerConfig = new AllNetworkInterfacesTcpServerConfig(1337);
+static final TcpServerConfig tcpServerConfig = new AllNetworkInterfacesTcpServerConfig(1337);
 
 // Declare an implementation of the Event Bus
-final IEventBus eventBus = new DefaultEventBus();
+static final IEventBus eventBus = new DefaultEventBus();
 
 // Declare an implementation of Network Client Manager
-final BaseNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
+static final BaseNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
 
 // Bundle it all together to form a Simple TCP Server
-final BaseNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
+static final BaseNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
 
-// Add a Network Event Listener to the Event Bus - it will just print events to System.out
-networkClientEventListener(eventBus);
-
-// Let's add another listener to the Event Bus, for the NetworkMessageReceivedEvent, exposing a small protocol to the network
-eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new BaseEventListener<NetworkMessageReceivedEvent>()
+public static void main(String[] args)
 {
-    @Override
-    public void onEvent(NetworkMessageReceivedEvent event)
+    // Add the reference PrintingEventListener - it will just print events to System.out
+    final PrintingEventListener printingEventListener = new PrintingEventListener(eventBus);
+
+    // Let's add another listener to the Event Bus, for the NetworkMessageReceivedEvent, exposing a small protocol to the network
+    eventBus.registerEventListener(NetworkMessageReceivedEvent.class, SimpleTcpServerExample::networkListener);
+
+    // Let's go!
+    tcpServer.start();
+}
+
+private static IEventListener<NetworkMessageReceivedEvent> networkListener()
+{
+    return event ->
     {
         final String message = new String(event.getNetworkMessage().getMessageData());
 
@@ -82,11 +89,8 @@ eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new BaseEventL
         {
             tcpServer.stop(new Exception("Until next time!"), true);
         }
-    }
-});
-
-// Let's go!
-tcpServer.start();
+    };
+}
 ```
 
 Running the example with just some random TCP client (you can use `cURL`, `nc`, or something arcane if on Windows) yields the following console output:

@@ -7,6 +7,13 @@ public abstract class BaseNetworkEventListener
 {
     private final IEventBus eventBus;
 
+    private final IEventListener<ClientConnectedEvent> clientConnectedListener = this::onClientConnected;
+    private final IEventListener<ClientDisconnectedEvent> clientDisconnectedListener = this::onClientDisconnected;
+    private final IEventListener<NetworkMessageReceivedEvent> networkMessageReceivedListener = this::onNetworkMessageReceived;
+    private final IEventListener<NetworkMessageSentEvent> networkMessageSentListener = this::onNetworkMessageSent;
+    private final IEventListener<ServerReadyEvent> serverReadyListener = this::onServerReady;
+    private final IEventListener<ServerClosedEvent> serverClosedListener = this::onServerClosed;
+
     protected BaseNetworkEventListener(IEventBus eventBus)
     {
         this.eventBus = eventBus;
@@ -29,58 +36,4 @@ public abstract class BaseNetworkEventListener
     public abstract void onServerReady(ServerReadyEvent serverReadyEvent);
 
     public abstract void onServerClosed(ServerClosedEvent serverClosedEvent);
-
-    private final BaseEventListener<ClientConnectedEvent> clientConnectedListener = new BaseEventListener<ClientConnectedEvent>()
-    {
-        @Override
-        public void onEvent(ClientConnectedEvent event)
-        {
-            onClientConnected(event);
-        }
-    };
-
-    private final BaseEventListener<ClientDisconnectedEvent> clientDisconnectedListener = new BaseEventListener<ClientDisconnectedEvent>()
-    {
-        @Override
-        public void onEvent(ClientDisconnectedEvent event)
-        {
-            onClientDisconnected(event);
-        }
-    };
-
-    private final BaseEventListener<NetworkMessageReceivedEvent> networkMessageReceivedListener = new BaseEventListener<NetworkMessageReceivedEvent>()
-    {
-        @Override
-        public void onEvent(NetworkMessageReceivedEvent event)
-        {
-            onNetworkMessageReceived(event);
-        }
-    };
-
-    private final BaseEventListener<NetworkMessageSentEvent> networkMessageSentListener = new BaseEventListener<NetworkMessageSentEvent>()
-    {
-        @Override
-        public void onEvent(NetworkMessageSentEvent event)
-        {
-            onNetworkMessageSent(event);
-        }
-    };
-
-    private final BaseEventListener<ServerReadyEvent> serverReadyListener = new BaseEventListener<ServerReadyEvent>()
-    {
-        @Override
-        public void onEvent(ServerReadyEvent event)
-        {
-            onServerReady(event);
-        }
-    };
-
-    private final BaseEventListener<ServerClosedEvent> serverClosedListener = new BaseEventListener<ServerClosedEvent>()
-    {
-        @Override
-        public void onEvent(ServerClosedEvent event)
-        {
-            onServerClosed(event);
-        }
-    };
 }

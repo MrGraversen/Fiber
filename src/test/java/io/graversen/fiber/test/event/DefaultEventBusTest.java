@@ -2,7 +2,8 @@ package io.graversen.fiber.test.event;
 
 import io.graversen.fiber.event.bus.DefaultEventBus;
 import io.graversen.fiber.event.common.BaseEvent;
-import io.graversen.fiber.event.listeners.BaseEventListener;
+import io.graversen.fiber.event.common.IEvent;
+import io.graversen.fiber.event.listeners.IEventListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -45,34 +46,26 @@ class DefaultEventBusTest
         final int eventCount = 1_000_000;
         final int eventSkipPrintCount = 100;
 
-        eventBus.registerEventListener(PrintEvent.class, new BaseEventListener<PrintEvent>()
+        eventBus.registerEventListener(PrintEvent.class, (IEventListener<PrintEvent>) event ->
         {
-            @Override
-            public void onEvent(PrintEvent event)
-            {
-                final int x = event.getX();
+            final int x = event.getX();
 
-                if (x % eventSkipPrintCount == 0)
-                {
-                    final String threadName = Thread.currentThread().getName();
-                    System.out.println(String.format("PrintEvent (Thread: %s) (Propagate Delay: %d) (Execute Duration: %d) \t x = %d", threadName, event.eventPropagationDelay(), event.eventExecutionDuration(), event.getX()));
-                }
+            if (x % eventSkipPrintCount == 0)
+            {
+                final String threadName = Thread.currentThread().getName();
+                System.out.println(String.format("PrintEvent (Thread: %s) (Propagate Delay: %d) (Execute Duration: %d) \t x = %d", threadName, event.eventPropagationDelay(), event.eventExecutionDuration(), event.getX()));
             }
         });
 
-        eventBus.registerEventListener(IncrementEvent.class, new BaseEventListener<IncrementEvent>()
+        eventBus.registerEventListener(IncrementEvent.class, (IEventListener<IncrementEvent>) event ->
         {
-            @Override
-            public void onEvent(IncrementEvent event)
-            {
-                final int x = event.getX();
-                eventBus.emitEvent(new PrintEvent(x));
+            final int x = event.getX();
+            eventBus.emitEvent(new PrintEvent(x));
 
-                if (x % eventSkipPrintCount == 0)
-                {
-                    final String threadName = Thread.currentThread().getName();
-                    System.out.println(String.format("IncrementEvent (Thread: %s) (Propagate Delay: %d) (Execute Duration: %d) \t x = %d", threadName, event.eventPropagationDelay(), event.eventExecutionDuration(), event.getX()));
-                }
+            if (x % eventSkipPrintCount == 0)
+            {
+                final String threadName = Thread.currentThread().getName();
+                System.out.println(String.format("IncrementEvent (Thread: %s) (Propagate Delay: %d) (Execute Duration: %d) \t x = %d", threadName, event.eventPropagationDelay(), event.eventExecutionDuration(), event.getX()));
             }
         });
 
@@ -86,7 +79,7 @@ class DefaultEventBusTest
 
     }
 
-    private class TestEventListener extends BaseEventListener<TestEvent>
+    private class TestEventListener implements IEventListener<TestEvent>
     {
         @Override
         public void onEvent(TestEvent event)

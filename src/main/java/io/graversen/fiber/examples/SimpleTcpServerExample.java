@@ -5,8 +5,9 @@ import io.graversen.fiber.config.tcp.TcpServerConfig;
 import io.graversen.fiber.event.bus.DefaultEventBus;
 import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
-import io.graversen.fiber.event.listeners.BaseEventListener;
 import io.graversen.fiber.event.listeners.BaseNetworkEventListener;
+import io.graversen.fiber.event.listeners.IEventListener;
+import io.graversen.fiber.event.listeners.reference.PrintingEventListener;
 import io.graversen.fiber.server.base.BaseNetworkingServer;
 import io.graversen.fiber.server.management.BaseNetworkClientManager;
 import io.graversen.fiber.server.management.DefaultNetworkClientManager;
@@ -14,84 +15,43 @@ import io.graversen.fiber.server.tcp.SimpleTcpServer;
 
 public class SimpleTcpServerExample
 {
+    // First, let's configure the TCP server instance - will listen on port 1337
+    static final TcpServerConfig tcpServerConfig = new AllNetworkInterfacesTcpServerConfig(1337);
+
+    // Declare an implementation of the Event Bus
+    static final IEventBus eventBus = new DefaultEventBus();
+
+    // Declare an implementation of Network Client Manager
+    static final BaseNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
+
+    // Bundle it all together to form a Simple TCP Server
+    static final BaseNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
+
     public static void main(String[] args)
     {
-        // First, let's configure the TCP server instance - will listen on port 1337
-        final TcpServerConfig tcpServerConfig = new AllNetworkInterfacesTcpServerConfig(1337);
-
-        // Declare an implementation of the Event Bus
-        final IEventBus eventBus = new DefaultEventBus();
-
-        // Declare an implementation of Network Client Manager
-        final BaseNetworkClientManager networkClientManager = new DefaultNetworkClientManager();
-
-        // Bundle it all together to form a Simple TCP Server
-        final BaseNetworkingServer tcpServer = new SimpleTcpServer(tcpServerConfig, networkClientManager, eventBus);
-
-        // Add a Network Event Listener to the Event Bus - it will just print events to System.out
-        networkClientEventListener(eventBus);
+        // Add the reference PrintingEventListener - it will just print events to System.out
+        final PrintingEventListener printingEventListener = new PrintingEventListener(eventBus);
 
         // Let's add another listener to the Event Bus, for the NetworkMessageReceivedEvent, exposing a small protocol to the network
-        eventBus.registerEventListener(NetworkMessageReceivedEvent.class, new BaseEventListener<NetworkMessageReceivedEvent>()
-        {
-            @Override
-            public void onEvent(NetworkMessageReceivedEvent event)
-            {
-                final String message = new String(event.getNetworkMessage().getMessageData());
-
-                if ("Hello".equals(message))
-                {
-                    tcpServer.send(event.getNetworkClient(), "World".getBytes());
-                }
-                else if ("Bye".equals(message))
-                {
-                    tcpServer.stop(new Exception("Until next time!"), true);
-                }
-            }
-        });
+        eventBus.registerEventListener(NetworkMessageReceivedEvent.class, SimpleTcpServerExample::networkListener);
 
         // Let's go!
         tcpServer.start();
     }
 
-    private static BaseNetworkEventListener networkClientEventListener(IEventBus eventBus)
+    private static IEventListener<NetworkMessageReceivedEvent> networkListener()
     {
-        return new BaseNetworkEventListener(eventBus)
+        return event ->
         {
-            @Override
-            public void onClientConnected(ClientConnectedEvent event)
-            {
-                event.print();
-            }
+            final String message = new String(event.getNetworkMessage().getMessageData());
 
-            @Override
-            public void onClientDisconnected(ClientDisconnectedEvent event)
+            if ("Hello".equals(message))
             {
-                event.print();
+                tcpServer.send(event.getNetworkClient(), "World".getBytes());
             }
-
-            @Override
-            public void onNetworkMessageReceived(NetworkMessageReceivedEvent event)
+            else if ("Bye".equals(message))
             {
-                event.print();
-            }
-
-            @Override
-            public void onNetworkMessageSent(NetworkMessageSentEvent event)
-            {
-                event.print();
-            }
-
-            @Override
-            public void onServerReady(ServerReadyEvent event)
-            {
-                event.print();
-            }
-
-            @Override
-            public void onServerClosed(ServerClosedEvent event)
-            {
-                event.print();
+                tcpServer.stop(new Exception("Until next time!"), true);
             }
         };
     }

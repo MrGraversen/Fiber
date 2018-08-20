@@ -1,7 +1,7 @@
 package io.graversen.fiber.event.bus;
 
 import io.graversen.fiber.event.common.IEvent;
-import io.graversen.fiber.event.listeners.BaseEventListener;
+import io.graversen.fiber.event.listeners.IEventListener;
 import io.graversen.fiber.server.async.DefaultThreadPool;
 import io.graversen.fiber.util.Constants;
 import io.graversen.fiber.util.Environment;
@@ -13,12 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 public class DefaultEventBus implements IEventBus
 {
     private final ThreadPoolExecutor threadPoolExecutor;
-    private final Map<Class<? extends IEvent>, List<BaseEventListener<? extends IEvent>>> eventListenerStore;
+    private final Map<Class<? extends IEvent>, List<IEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
     private final Map<Integer, EventPropagator> eventPropagatorStore;
     private final AtomicInteger eventPropagatorRoundRobin;
@@ -40,14 +42,20 @@ public class DefaultEventBus implements IEventBus
     @Override
     public boolean hasEventListener(Class<? extends IEvent> eventClass)
     {
-        final List<BaseEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
+        final List<IEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
         return !eventListeners.isEmpty();
     }
 
     @Override
-    public void registerEventListener(Class<? extends IEvent> eventClass, BaseEventListener<? extends IEvent> eventListener)
+    public void registerEventListener(Class<? extends IEvent> eventClass, Supplier<IEventListener<? extends IEvent>> eventListener)
     {
-        final List<BaseEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
+        registerEventListener(eventClass, eventListener.get());
+    }
+
+    @Override
+    public void registerEventListener(Class<? extends IEvent> eventClass, IEventListener<? extends IEvent> eventListener)
+    {
+        final List<IEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, new ArrayList<>());
         eventListeners.add(eventListener);
 
         this.eventListenerStore.put(eventClass, eventListeners);
@@ -67,7 +75,7 @@ public class DefaultEventBus implements IEventBus
     @Override
     public void emitEvent(IEvent event, boolean requiresPropagation)
     {
-        final List<BaseEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
+        final List<IEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
 
         if ((event.requiresPropagation() || requiresPropagation) && eventListeners.isEmpty())
         {
@@ -159,7 +167,7 @@ public class DefaultEventBus implements IEventBus
                                 if (event != null)
                                 {
                                     event.propagate();
-                                    eventListenerStore.get(eventClass).forEach(listener -> listener.propagateEvent(event));
+                                    eventListenerStore.get(eventClass).forEach(propagateEvent(event));
                                     event.finish();
                                 }
 
@@ -178,6 +186,21 @@ public class DefaultEventBus implements IEventBus
             {
                 e.printStackTrace();
             }
+        }
+
+        private Consumer<? super IEventListener<? extends IEvent>> propagateEvent(IEvent event)
+        {
+            return eventListener ->
+            {
+                try
+                {
+                    eventListener.propagate(event);
+                }
+                catch (Exception e)
+                {
+                    // Impossible to recover from; must be handled by concrete IEventListener
+                }
+            };
         }
     }
 }

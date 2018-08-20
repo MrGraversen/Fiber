@@ -24,6 +24,7 @@ public class DefaultEventBus implements IEventBus
     private final AtomicInteger eventPropagatorRoundRobin;
     private final int threadPoolSize;
 
+    private boolean active = false;
     private volatile boolean pause;
 
     public DefaultEventBus()
@@ -101,12 +102,17 @@ public class DefaultEventBus implements IEventBus
     @Override
     public void start()
     {
-        IntStream.rangeClosed(1, threadPoolSize).forEach(i ->
+        if (!active)
         {
-            final EventPropagator eventPropagator = new EventPropagator();
-            eventPropagatorStore.put(i, eventPropagator);
-            threadPoolExecutor.execute(eventPropagator);
-        });
+            IntStream.rangeClosed(1, threadPoolSize).forEach(i ->
+            {
+                final EventPropagator eventPropagator = new EventPropagator();
+                eventPropagatorStore.put(i, eventPropagator);
+                threadPoolExecutor.execute(eventPropagator);
+            });
+
+            active = true;
+        }
     }
 
     @Override
@@ -125,6 +131,7 @@ public class DefaultEventBus implements IEventBus
     public void stop()
     {
         threadPoolExecutor.shutdown();
+        active = false;
     }
 
     private class EventPropagator implements Runnable

@@ -2,7 +2,7 @@ package io.graversen.fiber.event.common;
 
 import java.time.LocalDateTime;
 
-public class BaseEvent implements IEvent
+public abstract class BaseEvent implements IEvent
 {
     private final boolean requiresPropagation;
     private final LocalDateTime eventEmittedAt;

@@ -1,7 +1,6 @@
 package io.graversen.fiber.test.event;
 
 import io.graversen.fiber.event.bus.DefaultEventBus;
-import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.BaseEvent;
 import io.graversen.fiber.event.listeners.BaseEventListener;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import java.time.format.DateTimeFormatter;
 import java.util.stream.IntStream;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class DefaultEventBusTest
 {
@@ -24,7 +25,18 @@ class DefaultEventBusTest
         eventBus.start();
     }
 
-    
+    @Test
+    void test_registerEventListener()
+    {
+        eventBus.registerEventListener(TestEvent.class, new TestEventListener());
+        assertTrue(eventBus.hasEventListener(TestEvent.class));
+    }
+
+    @Test
+    void test_requiresPropagationFailure()
+    {
+        assertThrows(IllegalArgumentException.class, () -> eventBus.emitEvent(new TestEvent(), true));
+    }
 
     @Test
     @Disabled
@@ -69,8 +81,17 @@ class DefaultEventBusTest
         Thread.sleep(1000000);
     }
 
-    private class TestEventOne extends BaseEvent
+    private class TestEvent extends BaseEvent
     {
 
+    }
+
+    private class TestEventListener extends BaseEventListener<TestEvent>
+    {
+        @Override
+        public void onEvent(TestEvent event)
+        {
+
+        }
     }
 }

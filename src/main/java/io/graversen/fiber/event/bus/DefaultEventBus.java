@@ -22,15 +22,15 @@ public class DefaultEventBus implements IEventBus
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
     private final Map<Integer, EventPropagator> eventPropagatorStore;
     private final AtomicInteger eventPropagatorRoundRobin;
-    private final int threadPoolSize;
+    private final int cachedThreadPoolSize;
 
     private boolean active = false;
     private volatile boolean pause;
 
     public DefaultEventBus()
     {
-        this.threadPoolSize = getThreadPoolSize();
-        this.threadPoolExecutor = new DefaultThreadPool(threadPoolSize, getClass().getSimpleName());
+        this.cachedThreadPoolSize = getThreadPoolSize();
+        this.threadPoolExecutor = new DefaultThreadPool(cachedThreadPoolSize, getClass().getSimpleName());
         this.eventListenerStore = new ConcurrentHashMap<>();
         this.eventQueueStore = new ConcurrentHashMap<>();
         this.eventPropagatorStore = new ConcurrentHashMap<>();
@@ -84,7 +84,7 @@ public class DefaultEventBus implements IEventBus
     private void provokeNextEventPropagator()
     {
         int propagator = eventPropagatorRoundRobin.incrementAndGet();
-        if (propagator > threadPoolSize) propagator = 1;
+        if (propagator > cachedThreadPoolSize) propagator = 1;
 
         final EventPropagator nextEventPropagator = eventPropagatorStore.get(propagator);
         synchronized (nextEventPropagator.LOCK)
@@ -104,7 +104,7 @@ public class DefaultEventBus implements IEventBus
     {
         if (!active)
         {
-            IntStream.rangeClosed(1, threadPoolSize).forEach(i ->
+            IntStream.rangeClosed(1, cachedThreadPoolSize).forEach(i ->
             {
                 final EventPropagator eventPropagator = new EventPropagator();
                 eventPropagatorStore.put(i, eventPropagator);

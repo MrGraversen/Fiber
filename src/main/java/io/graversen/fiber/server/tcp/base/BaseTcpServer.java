@@ -110,16 +110,16 @@ public class BaseTcpServer extends BaseNetworkingServer
 
     private class TcpSocketServerWrapper
     {
-        private final BaseTcpServer abstractTcpServer;
+        private final BaseTcpServer tcpServer;
 
         private final ServerSocketChannel serverSocketChannel;
         private final Selector defaultSelector;
 
-        public TcpSocketServerWrapper(BaseTcpServer abstractTcpServer)
+        public TcpSocketServerWrapper(BaseTcpServer tcpServer)
         {
             try
             {
-                this.abstractTcpServer = abstractTcpServer;
+                this.tcpServer = tcpServer;
                 this.serverSocketChannel = ServerSocketChannel.open();
                 this.defaultSelector = Selector.open();
             }
@@ -199,7 +199,7 @@ public class BaseTcpServer extends BaseNetworkingServer
                     }
                     catch (Exception e)
                     {
-                        final ServerErrorEvent serverErrorEvent = new ServerErrorEvent(abstractTcpServer, e);
+                        final ServerErrorEvent serverErrorEvent = new ServerErrorEvent(tcpServer, e);
                         getEventBus().emitEvent(serverErrorEvent, true);
                     }
 

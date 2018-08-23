@@ -13,6 +13,7 @@ public abstract class BaseNetworkEventListener
     private final IEventListener<NetworkMessageSentEvent> networkMessageSentListener = this::onNetworkMessageSent;
     private final IEventListener<ServerReadyEvent> serverReadyListener = this::onServerReady;
     private final IEventListener<ServerClosedEvent> serverClosedListener = this::onServerClosed;
+    private final IEventListener<ServerErrorEvent> serverErrorListener = this::onServerError;
 
     protected BaseNetworkEventListener(IEventBus eventBus)
     {
@@ -23,6 +24,7 @@ public abstract class BaseNetworkEventListener
         this.eventBus.registerEventListener(NetworkMessageSentEvent.class, this.networkMessageSentListener);
         this.eventBus.registerEventListener(ServerReadyEvent.class, this.serverReadyListener);
         this.eventBus.registerEventListener(ServerClosedEvent.class, this.serverClosedListener);
+        this.eventBus.registerEventListener(ServerErrorEvent.class, this.serverErrorListener);
     }
 
     public abstract void onClientConnected(ClientConnectedEvent clientConnectedEvent);
@@ -36,4 +38,6 @@ public abstract class BaseNetworkEventListener
     public abstract void onServerReady(ServerReadyEvent serverReadyEvent);
 
     public abstract void onServerClosed(ServerClosedEvent serverClosedEvent);
+
+    public abstract void onServerError(ServerErrorEvent serverClosedEvent);
 }

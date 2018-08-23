@@ -18,6 +18,7 @@ public abstract class BaseNetworkClientManager
 
     public Optional<INetworkClient> getClient(String id)
     {
+        if (Objects.isNull(id)) return Optional.empty();
         return Optional.ofNullable(clientStore.getOrDefault(id, null));
     }
 

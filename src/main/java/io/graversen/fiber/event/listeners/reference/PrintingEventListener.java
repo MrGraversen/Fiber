@@ -46,4 +46,10 @@ public class PrintingEventListener extends BaseNetworkEventListener
     {
         event.print();
     }
+
+    @Override
+    public void onServerError(ServerErrorEvent event)
+    {
+        event.print();
+    }
 }

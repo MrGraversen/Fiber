@@ -11,6 +11,7 @@ public final class WebSocketNetworkClient implements INetworkClient
     private final String id;
     private final String ip;
     private final int port;
+    private final long connectedAt;
 
     public WebSocketNetworkClient(WebSocket webSocket, String ip, int port)
     {
@@ -18,6 +19,7 @@ public final class WebSocketNetworkClient implements INetworkClient
         this.id = UUID.randomUUID().toString();
         this.ip = ip;
         this.port = port;
+        this.connectedAt = System.currentTimeMillis();
     }
 
     public WebSocket getWebSocket()
@@ -41,5 +43,11 @@ public final class WebSocketNetworkClient implements INetworkClient
     public int port()
     {
         return port;
+    }
+
+    @Override
+    public long connectedAt()
+    {
+        return connectedAt;
     }
 }

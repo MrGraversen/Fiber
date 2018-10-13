@@ -10,6 +10,8 @@ public interface INetworkClient
 
     int port();
 
+    long connectedAt();
+
     default String connectionTuple()
     {
         return NetworkUtil.getConnectionTuple(ipAddress(), port());

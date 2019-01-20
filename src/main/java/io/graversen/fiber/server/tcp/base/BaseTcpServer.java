@@ -55,9 +55,12 @@ public class BaseTcpServer extends BaseNetworkingServer
             getNetworkClientManager().getAllClients().forEach(networkClient -> disconnect(networkClient, reason));
         }
 
-        tcpSocketServerWrapper.stop();
         final ServerClosedEvent serverClosedEvent = new ServerClosedEvent(this, reason);
         getEventBus().emitEvent(serverClosedEvent, true);
+
+        eventLoopRunner.interrupt();
+        tcpSocketServerWrapper.stop();
+        getEventBus().stop();
     }
 
     @Override
@@ -157,7 +160,8 @@ public class BaseTcpServer extends BaseNetworkingServer
 
         public Runnable getEventLoop()
         {
-            return () -> {
+            return () ->
+            {
                 while (!Thread.currentThread().isInterrupted() && serverSocketChannel.isOpen())
                 {
                     try
@@ -165,7 +169,8 @@ public class BaseTcpServer extends BaseNetworkingServer
                         defaultSelector.select();
                         final Iterator<SelectionKey> selectionKeys = defaultSelector.selectedKeys().iterator();
 
-                        selectionKeys.forEachRemaining(selectionKey -> {
+                        selectionKeys.forEachRemaining(selectionKey ->
+                        {
                             try
                             {
                                 if (selectionKey.isValid())
@@ -264,7 +269,8 @@ public class BaseTcpServer extends BaseNetworkingServer
                 final String connectionTuple = NetworkUtil.getConnectionTuple(socketAddress.getHostAddress(), socketChannel.socket().getPort());
                 final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
-                tcpNetworkClientByConnectionTuple.ifPresent(tcpNetworkClient -> {
+                tcpNetworkClientByConnectionTuple.ifPresent(tcpNetworkClient ->
+                {
                     final NetworkMessage networkMessage = new NetworkMessage(dataTrimmed);
 
                     final NetworkMessageReceivedEvent networkMessageReceivedEvent = new NetworkMessageReceivedEvent(tcpNetworkClient, networkMessage);
@@ -283,10 +289,12 @@ public class BaseTcpServer extends BaseNetworkingServer
             final String connectionTuple = NetworkUtil.getConnectionTuple(socketAddress.getHostAddress(), socketChannel.socket().getPort());
             final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
-            tcpNetworkClientByConnectionTuple.ifPresent(networkClient -> {
+            tcpNetworkClientByConnectionTuple.ifPresent(networkClient ->
+            {
                 final TcpNetworkClient tcpNetworkClient = ((TcpNetworkClient) networkClient);
 
-                tcpNetworkClient.pollAllFromNetworkQueue().forEach(networkMessage -> {
+                tcpNetworkClient.pollAllFromNetworkQueue().forEach(networkMessage ->
+                {
                     try
                     {
                         socketChannel.write(ByteBuffer.wrap(networkMessage.getMessageData()));
@@ -312,7 +320,8 @@ public class BaseTcpServer extends BaseNetworkingServer
             final String connectionTuple = NetworkUtil.getConnectionTuple(socketAddress.getHostAddress(), socketChannel.socket().getPort());
             final Optional<INetworkClient> tcpNetworkClientByConnectionTuple = getNetworkClientManager().getClientByConnectionTuple(connectionTuple);
 
-            tcpNetworkClientByConnectionTuple.ifPresent(networkClient -> {
+            tcpNetworkClientByConnectionTuple.ifPresent(networkClient ->
+            {
                 getNetworkClientManager().deleteClient(networkClient);
 
                 try

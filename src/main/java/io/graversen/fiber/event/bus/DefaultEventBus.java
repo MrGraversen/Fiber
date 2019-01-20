@@ -138,8 +138,16 @@ public class DefaultEventBus implements IEventBus
     @Override
     public void stop()
     {
-        threadPoolExecutor.shutdown();
+        threadPoolExecutor.shutdownNow();
         active = false;
+
+        eventPropagatorStore.forEach((i, eventPropagator) ->
+        {
+            synchronized (eventPropagator.LOCK)
+            {
+                eventPropagator.LOCK.notify();
+            }
+        });
     }
 
     private class EventPropagator implements Runnable
@@ -184,7 +192,7 @@ public class DefaultEventBus implements IEventBus
             }
             catch (Exception e)
             {
-                e.printStackTrace();
+                // Ignore
             }
         }
 

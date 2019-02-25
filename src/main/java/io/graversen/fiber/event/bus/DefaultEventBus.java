@@ -69,7 +69,7 @@ public class DefaultEventBus implements IEventBus
     @Override
     public void emitEvent(IEvent event)
     {
-        this.emitEvent(event, false);
+        this.emitEvent(event, event.requiresPropagation());
     }
 
     @Override
@@ -77,16 +77,19 @@ public class DefaultEventBus implements IEventBus
     {
         final List<IEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), new ArrayList<>());
 
-        if ((event.requiresPropagation() || requiresPropagation) && eventListeners.isEmpty())
+        if (requiresPropagation && eventListeners.isEmpty())
         {
             throw new IllegalArgumentException(String.format("No event listener found for event %s. Did you register it?", event.getClass()));
         }
 
-        final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.get(event.getClass());
-        eventQueue.add(event);
+        if (eventQueueStore.containsKey(event.getClass()))
+        {
+            final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.get(event.getClass());
+            eventQueue.add(event);
 
-        eventQueueStore.put(event.getClass(), eventQueue);
-        provokeNextEventPropagator();
+            eventQueueStore.put(event.getClass(), eventQueue);
+            provokeNextEventPropagator();
+        }
     }
 
     private void provokeNextEventPropagator()

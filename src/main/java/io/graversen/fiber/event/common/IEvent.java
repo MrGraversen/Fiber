@@ -30,6 +30,11 @@ public interface IEvent
         return ChronoUnit.MILLIS.between(eventPropagatedAt(), eventFinishedExecutionAt());
     }
 
+    default String eventName()
+    {
+        return getClass().getSimpleName();
+    }
+
     LocalDateTime eventEmittedAt();
 
     LocalDateTime eventPropagatedAt();

@@ -25,5 +25,11 @@ public interface IEventBus
 
     void resume();
 
+    void purgeAll();
+
+    void purge(Class<? extends IEvent> eventType);
+
+    void stop(boolean gracefully);
+
     void stop();
 }

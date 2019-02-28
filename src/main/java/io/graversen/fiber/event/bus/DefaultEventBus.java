@@ -9,6 +9,7 @@ import io.graversen.fiber.util.Environment;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -19,12 +20,13 @@ import java.util.stream.IntStream;
 
 public class DefaultEventBus implements IEventBus
 {
-    private final ThreadPoolExecutor threadPoolExecutor;
     private final Map<Class<? extends IEvent>, List<IEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
     private final Map<Integer, EventPropagator> eventPropagatorStore;
     private final AtomicInteger eventPropagatorRoundRobin;
     private final int cachedThreadPoolSize;
+
+    private ThreadPoolExecutor threadPoolExecutor;
 
     private boolean active = false;
     private volatile boolean pause;
@@ -32,7 +34,6 @@ public class DefaultEventBus implements IEventBus
     public DefaultEventBus()
     {
         this.cachedThreadPoolSize = getThreadPoolSize();
-        this.threadPoolExecutor = new DefaultThreadPool(cachedThreadPoolSize, getClass().getSimpleName());
         this.eventListenerStore = new ConcurrentHashMap<>();
         this.eventQueueStore = new ConcurrentHashMap<>();
         this.eventPropagatorStore = new ConcurrentHashMap<>();
@@ -115,6 +116,9 @@ public class DefaultEventBus implements IEventBus
     {
         if (!active)
         {
+            this.threadPoolExecutor = new DefaultThreadPool(cachedThreadPoolSize, getClass().getSimpleName());
+            this.threadPoolExecutor.prestartAllCoreThreads();
+
             IntStream.rangeClosed(1, cachedThreadPoolSize).forEach(i ->
             {
                 final EventPropagator eventPropagator = new EventPropagator();
@@ -139,18 +143,61 @@ public class DefaultEventBus implements IEventBus
     }
 
     @Override
+    public void purgeAll()
+    {
+        if (threadPoolExecutor != null && active)
+        {
+            final boolean pausedBefore = pause;
+            if (!pausedBefore) pause();
+
+            final BlockingQueue<Runnable> queue = threadPoolExecutor.getQueue();
+            queue.forEach(threadPoolExecutor::remove);
+
+            eventQueueStore.keySet().forEach(this::purge);
+
+            if (!pausedBefore) resume();
+        }
+    }
+
+    @Override
+    public void purge(Class<? extends IEvent> eventType)
+    {
+        if (eventQueueStore.containsKey(eventType))
+        {
+            eventQueueStore.get(eventType).clear();
+        }
+    }
+
+    @Override
+    public void stop(boolean gracefully)
+    {
+        if (active)
+        {
+            if (gracefully)
+            {
+                threadPoolExecutor.shutdownNow();
+            }
+            else
+            {
+                threadPoolExecutor.shutdown();
+            }
+
+            active = false;
+
+            eventPropagatorStore.forEach((i, eventPropagator) ->
+            {
+                synchronized (eventPropagator.LOCK)
+                {
+                    eventPropagator.LOCK.notify();
+                }
+            });
+        }
+    }
+
+    @Override
     public void stop()
     {
-        threadPoolExecutor.shutdownNow();
-        active = false;
-
-        eventPropagatorStore.forEach((i, eventPropagator) ->
-        {
-            synchronized (eventPropagator.LOCK)
-            {
-                eventPropagator.LOCK.notify();
-            }
-        });
+        this.stop(false);
     }
 
     private class EventPropagator implements Runnable

@@ -6,7 +6,6 @@ import io.graversen.fiber.server.async.DefaultThreadPool;
 import io.graversen.fiber.util.Constants;
 import io.graversen.fiber.util.Environment;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -68,6 +67,24 @@ public class DefaultEventBus implements IEventBus
         {
             this.eventQueueStore.put(eventClass, new ConcurrentLinkedQueue<>());
         }
+    }
+
+    @Override
+    public void unregisterEventListeners(Class<? extends IEvent> eventClass)
+    {
+        Objects.requireNonNull(eventClass, "Parameter 'eventClass' must not be null");
+
+        final List<IEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, internalEventListenerList());
+        if (!eventListeners.isEmpty())
+        {
+            eventListenerStore.remove(eventClass);
+        }
+    }
+
+    @Override
+    public void unregisterAllEventListeners()
+    {
+        eventListenerStore.keySet().forEach(this::unregisterEventListeners);
     }
 
     @Override

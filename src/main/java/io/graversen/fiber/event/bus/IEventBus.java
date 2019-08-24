@@ -13,6 +13,10 @@ public interface IEventBus
 
     void registerEventListener(Class<? extends IEvent> eventClass, IEventListener<? extends IEvent> eventListener);
 
+    void unregisterEventListeners(Class<? extends IEvent> eventClass);
+
+    void unregisterAllEventListeners();
+
     void emitEvent(IEvent event);
 
     void emitEvent(IEvent event, boolean requiresPropagation);

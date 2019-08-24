@@ -28,7 +28,7 @@ public class DefaultEventBus implements IEventBus
 
     private ThreadPoolExecutor threadPoolExecutor;
 
-    private boolean active = false;
+    private volatile boolean active = false;
     private volatile boolean pause;
 
     public DefaultEventBus()
@@ -116,6 +116,12 @@ public class DefaultEventBus implements IEventBus
     {
         if (!active)
         {
+            if (threadPoolExecutor != null)
+            {
+                threadPoolExecutor.shutdownNow();
+                threadPoolExecutor = null;
+            }
+
             this.threadPoolExecutor = new DefaultThreadPool(cachedThreadPoolSize, getClass().getSimpleName());
             this.threadPoolExecutor.prestartAllCoreThreads();
 

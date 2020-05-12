@@ -5,7 +5,6 @@ import io.graversen.fiber.config.tcp.TcpServerConfig;
 import io.graversen.fiber.event.bus.DefaultEventBus;
 import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.event.common.*;
-import io.graversen.fiber.event.listeners.BaseNetworkEventListener;
 import io.graversen.fiber.event.listeners.IEventListener;
 import io.graversen.fiber.event.listeners.reference.PrintingEventListener;
 import io.graversen.fiber.server.base.BaseNetworkingServer;

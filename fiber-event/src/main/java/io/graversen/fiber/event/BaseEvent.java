@@ -57,4 +57,8 @@ public abstract class BaseEvent implements IEvent {
             throw new IllegalStateException(String.format("%s already finished!", getClass().getSimpleName()));
         }
     }
+
+    public static EventSignature signature() {
+        return new EventSignature(BaseEvent.class.getEnclosingClass());
+    }
 }

@@ -2,7 +2,6 @@ package io.graversen.fiber.test.event;
 
 import io.graversen.fiber.event.bus.DefaultEventBus;
 import io.graversen.fiber.event.common.BaseEvent;
-import io.graversen.fiber.event.common.IEvent;
 import io.graversen.fiber.event.listeners.IEventListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;

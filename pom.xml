@@ -6,6 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.graversen</groupId>
     <artifactId>fiber-parent</artifactId>
+    <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -19,4 +20,8 @@
         <plugins>
         </plugins>
     </build>
+
+    <modules>
+        <module>fiber-core</module>
+    </modules>
 </project>

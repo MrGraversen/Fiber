@@ -24,5 +24,6 @@
     <modules>
         <module>fiber-core</module>
         <module>fiber-utils</module>
+        <module>fiber-event</module>
     </modules>
 </project>

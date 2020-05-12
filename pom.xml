@@ -23,5 +23,6 @@
 
     <modules>
         <module>fiber-core</module>
+        <module>fiber-utils</module>
     </modules>
 </project>

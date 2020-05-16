@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 @Slf4j
-class DefaultEventBus implements IEventBus {
+public class DefaultEventBus implements IEventBus {
     private final Map<Class<? extends IEvent>, List<IEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
     private final Map<Integer, EventPropagator> eventPropagatorStore;
@@ -169,8 +169,7 @@ class DefaultEventBus implements IEventBus {
 
             active = false;
 
-            eventPropagatorStore.forEach((i, eventPropagator) ->
-            {
+            eventPropagatorStore.forEach((i, eventPropagator) -> {
                 synchronized (eventPropagator.LOCK) {
                     eventPropagator.LOCK.notify();
                 }
@@ -217,7 +216,7 @@ class DefaultEventBus implements IEventBus {
                 try {
                     eventListener.propagate(event);
                 } catch (Exception e) {
-                    // Impossible to recover from; must be handled by concrete IEventListener
+                    // Impossible to recover from; must be handled by concrete IEventListener instance
                 }
             };
         }

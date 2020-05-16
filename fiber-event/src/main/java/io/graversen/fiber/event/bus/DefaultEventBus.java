@@ -3,6 +3,7 @@ package io.graversen.fiber.event.bus;
 import io.graversen.fiber.event.IEvent;
 import io.graversen.fiber.event.IEventListener;
 import io.graversen.fiber.utils.FiberEnvironment;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
@@ -13,8 +14,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
-public class DefaultEventBus implements IEventBus
-{
+@Slf4j
+class DefaultEventBus implements IEventBus {
     private final Map<Class<? extends IEvent>, List<IEventListener<? extends IEvent>>> eventListenerStore;
     private final Map<Class<? extends IEvent>, ConcurrentLinkedQueue<IEvent>> eventQueueStore;
     private final Map<Integer, EventPropagator> eventPropagatorStore;
@@ -24,10 +25,9 @@ public class DefaultEventBus implements IEventBus
     private ThreadPoolExecutor threadPoolExecutor;
 
     private volatile boolean active = false;
-    private volatile boolean pause;
+    private volatile boolean pause = false;
 
-    public DefaultEventBus()
-    {
+    public DefaultEventBus() {
         this.cachedThreadPoolSize = getThreadPoolSize();
         this.eventListenerStore = new ConcurrentHashMap<>();
         this.eventQueueStore = new ConcurrentHashMap<>();
@@ -36,136 +36,109 @@ public class DefaultEventBus implements IEventBus
     }
 
     @Override
-    public boolean hasEventListener(Class<? extends IEvent> eventClass)
-    {
+    public boolean hasEventListener(Class<? extends IEvent> eventClass) {
         Objects.requireNonNull(eventClass, "Parameter 'eventClass' must not be null");
-        final List<IEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(eventClass, internalEventListenerList());
+        final var eventListeners = eventListenerStore.computeIfAbsent(eventClass, e -> internalEventListenerList());
         return !eventListeners.isEmpty();
     }
 
     @Override
-    public void registerEventListener(Class<? extends IEvent> eventClass, Supplier<IEventListener<? extends IEvent>> eventListener)
-    {
+    public void registerEventListener(Class<? extends IEvent> eventClass, Supplier<IEventListener<? extends IEvent>> eventListener) {
         Objects.requireNonNull(eventClass, "Parameter 'eventClass' must not be null");
         registerEventListener(eventClass, eventListener.get());
     }
 
     @Override
-    public void registerEventListener(Class<? extends IEvent> eventClass, IEventListener<? extends IEvent> eventListener)
-    {
+    public void registerEventListener(Class<? extends IEvent> eventClass, IEventListener<? extends IEvent> eventListener) {
         Objects.requireNonNull(eventClass, "Parameter 'eventClass' must not be null");
         Objects.requireNonNull(eventListener, "Parameter 'eventListener' must not be null");
 
-        final List<IEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, internalEventListenerList());
+        final var eventListeners = eventListenerStore.computeIfAbsent(eventClass, e -> internalEventListenerList());
         eventListeners.add(eventListener);
 
-        this.eventListenerStore.put(eventClass, eventListeners);
-
-        if (!this.eventQueueStore.containsKey(eventClass))
-        {
+        if (!this.eventQueueStore.containsKey(eventClass)) {
             this.eventQueueStore.put(eventClass, new ConcurrentLinkedQueue<>());
         }
     }
 
     @Override
-    public void unregisterEventListeners(Class<? extends IEvent> eventClass)
-    {
+    public void unregisterEventListeners(Class<? extends IEvent> eventClass) {
         Objects.requireNonNull(eventClass, "Parameter 'eventClass' must not be null");
 
-        final List<IEventListener<? extends IEvent>> eventListeners = eventListenerStore.getOrDefault(eventClass, internalEventListenerList());
-        if (!eventListeners.isEmpty())
-        {
+        final var eventListeners = eventListenerStore.computeIfAbsent(eventClass, e -> internalEventListenerList());
+
+        if (!eventListeners.isEmpty()) {
             eventListenerStore.remove(eventClass);
         }
     }
 
     @Override
-    public void unregisterAllEventListeners()
-    {
+    public void unregisterAllEventListeners() {
         eventListenerStore.keySet().forEach(this::unregisterEventListeners);
     }
 
-
     @Override
-    public void emitEvent(IEvent event)
-    {
-        final List<IEventListener<? extends IEvent>> eventListeners = this.eventListenerStore.getOrDefault(event.getClass(), internalEventListenerList());
-
-//        if (requiresPropagation && eventListeners.isEmpty())
-//        {
-//            throw new IllegalArgumentException(String.format("No event listener found for event %s. Did you register it?", event.getClass()));
-//        }
-
-        if (eventQueueStore.containsKey(event.getClass()))
-        {
+    public void emitEvent(IEvent event) {
+        if (eventQueueStore.containsKey(event.getClass())) {
             final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.get(event.getClass());
             eventQueue.add(event);
 
             eventQueueStore.put(event.getClass(), eventQueue);
-            provokeNextEventPropagator();
+            hintNextEventPropagator();
+        } else {
+            log.warn("Event listener not registered for event: {}", event.getClass());
         }
     }
 
-    private void provokeNextEventPropagator()
-    {
+    private void hintNextEventPropagator() {
         int propagator = eventPropagatorRoundRobin.incrementAndGet();
         if (propagator > cachedThreadPoolSize) propagator = 1;
 
         final EventPropagator nextEventPropagator = eventPropagatorStore.get(propagator);
-        synchronized (nextEventPropagator.LOCK)
-        {
+        synchronized (nextEventPropagator.LOCK) {
             nextEventPropagator.LOCK.notify();
         }
     }
 
     @Override
-    public int getThreadPoolSize()
-    {
+    public int getThreadPoolSize() {
         return FiberEnvironment.availableProcessors();
     }
 
     @Override
-    public void start()
-    {
-//        if (!active)
-//        {
-//            if (threadPoolExecutor != null)
-//            {
-//                threadPoolExecutor.shutdownNow();
-//                threadPoolExecutor = null;
-//            }
-//
-//            this.threadPoolExecutor = new DefaultThreadPool(cachedThreadPoolSize, getClass().getSimpleName());
-//            this.threadPoolExecutor.prestartAllCoreThreads();
-//
-//            IntStream.rangeClosed(1, cachedThreadPoolSize).forEach(i ->
-//            {
-//                final EventPropagator eventPropagator = new EventPropagator();
-//                eventPropagatorStore.put(i, eventPropagator);
-//                threadPoolExecutor.execute(eventPropagator);
-//            });
-//
-//            active = true;
-//        }
+    public void start() {
+        if (!active) {
+            if (threadPoolExecutor != null) {
+                threadPoolExecutor.shutdownNow();
+                threadPoolExecutor = null;
+            }
+
+            this.threadPoolExecutor = new DefaultThreadPool(cachedThreadPoolSize, getClass().getSimpleName());
+            this.threadPoolExecutor.prestartAllCoreThreads();
+
+            IntStream.rangeClosed(1, cachedThreadPoolSize).forEach(i -> {
+                final EventPropagator eventPropagator = new EventPropagator();
+                eventPropagatorStore.put(i, eventPropagator);
+                threadPoolExecutor.execute(eventPropagator);
+            });
+
+            active = true;
+        }
     }
 
     @Override
-    public void pause()
-    {
+    public void pause() {
         pause = true;
     }
 
     @Override
-    public void resume()
-    {
+    public void resume() {
         pause = false;
     }
 
     @Override
-    public void purgeAll()
-    {
-        if (threadPoolExecutor != null && active)
-        {
+    public void purgeAll() {
+        if (threadPoolExecutor != null && active) {
             final boolean pausedBefore = pause;
             if (!pausedBefore) pause();
 
@@ -179,25 +152,18 @@ public class DefaultEventBus implements IEventBus
     }
 
     @Override
-    public void purge(Class<? extends IEvent> eventType)
-    {
-        if (eventQueueStore.containsKey(eventType))
-        {
+    public void purge(Class<? extends IEvent> eventType) {
+        if (eventQueueStore.containsKey(eventType)) {
             eventQueueStore.get(eventType).clear();
         }
     }
 
     @Override
-    public void stop(boolean gracefully)
-    {
-        if (active)
-        {
-            if (gracefully)
-            {
+    public void stop(boolean gracefully) {
+        if (active) {
+            if (gracefully) {
                 threadPoolExecutor.shutdownNow();
-            }
-            else
-            {
+            } else {
                 threadPoolExecutor.shutdown();
             }
 
@@ -205,8 +171,7 @@ public class DefaultEventBus implements IEventBus
 
             eventPropagatorStore.forEach((i, eventPropagator) ->
             {
-                synchronized (eventPropagator.LOCK)
-                {
+                synchronized (eventPropagator.LOCK) {
                     eventPropagator.LOCK.notify();
                 }
             });
@@ -214,75 +179,51 @@ public class DefaultEventBus implements IEventBus
     }
 
     @Override
-    public void stop()
-    {
+    public void stop() {
         this.stop(false);
     }
 
-    private class EventPropagator implements Runnable
-    {
+    class EventPropagator implements Runnable {
         final Object LOCK = new Object();
 
         @Override
-        public void run()
-        {
-//            try
-//            {
-//                while (!Thread.currentThread().isInterrupted())
-//                {
-//                    if (!pause)
-//                    {
-//                        for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet())
-//                        {
-//                            final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.getOrDefault(eventClass, new ConcurrentLinkedQueue<>());
-//
-//                            int eventsPropagated = 0;
-//                            while (eventQueue.peek() != null)
-//                            {
-//                                final IEvent event = eventQueue.poll();
-//
-//                                if (event != null)
-//                                {
-//                                    event.propagate();
-//                                    eventListenerStore.get(eventClass).forEach(propagateEvent(event));
-//                                    event.finish();
-//                                }
-//
-//                                if (Constants.MAX_UNIQUE_SEQUENTIAL_EVENTS <= ++eventsPropagated) break;
-//                            }
-//                        }
-//                    }
-//
-//                    synchronized (LOCK)
-//                    {
-//                        LOCK.wait(Constants.CONCURRENCY_LOCK_EXPIRY_MILLIS);
-//                    }
-//                }
-//            }
-//            catch (Exception e)
-//            {
-//                // Ignore
-//            }
+        public void run() {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    if (!pause) {
+                        for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet()) {
+                            final var eventQueue = eventQueueStore.computeIfAbsent(eventClass, e -> new ConcurrentLinkedQueue<>());
+                            final IEvent event = eventQueue.poll();
+
+                            if (event != null) {
+                                event.propagate();
+                                eventListenerStore.get(eventClass).forEach(propagateEvent(event));
+                                event.finish();
+                            }
+                        }
+                    }
+
+                    synchronized (LOCK) {
+                        LOCK.wait(1000);
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore
+            }
         }
 
-        private Consumer<? super IEventListener<? extends IEvent>> propagateEvent(IEvent event)
-        {
-            return eventListener ->
-            {
-                try
-                {
+        private Consumer<? super IEventListener<? extends IEvent>> propagateEvent(IEvent event) {
+            return eventListener -> {
+                try {
                     eventListener.propagate(event);
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     // Impossible to recover from; must be handled by concrete IEventListener
                 }
             };
         }
     }
 
-    private List<IEventListener<? extends IEvent>> internalEventListenerList()
-    {
+    private List<IEventListener<? extends IEvent>> internalEventListenerList() {
         return new CopyOnWriteArrayList<>();
     }
 }

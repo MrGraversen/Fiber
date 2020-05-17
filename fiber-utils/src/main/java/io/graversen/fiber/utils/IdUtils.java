@@ -12,4 +12,8 @@ public class IdUtils {
     public String fastEventId() {
         return new UUID(RANDOM.nextLong(), RANDOM.nextLong()).toString();
     }
+
+    public String fastClientId() {
+        return new UUID(RANDOM.nextLong(), RANDOM.nextLong()).toString();
+    }
 }

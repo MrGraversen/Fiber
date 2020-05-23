@@ -1,6 +1,7 @@
 package io.graversen.fiber.core;
 
 import io.graversen.fiber.event.bus.IEventBus;
+import io.graversen.fiber.utils.ChannelUtils;
 import io.graversen.fiber.utils.ControllableTaskLoop;
 import io.graversen.fiber.utils.IClient;
 import io.graversen.fiber.utils.IdUtils;
@@ -14,13 +15,13 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.LinkedList;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @Slf4j
 public abstract class AsynchronousTcpServer implements IServer {
+    private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final BlockingQueue<NetworkPayload> networkOutQueue;
     private final IEventBus eventBus;
@@ -51,40 +52,46 @@ public abstract class AsynchronousTcpServer implements IServer {
 
     @Override
     public void start() {
-        try {
-            final var start = LocalDateTime.now();
-
+        if (started.compareAndSet(false, true)) {
             try {
-                this.channelGroup = AsynchronousChannelGroup.withThreadPool(Executors.newSingleThreadExecutor());
+                final var start = LocalDateTime.now();
+
+                try {
+                    this.channelGroup = AsynchronousChannelGroup.withThreadPool(Executors.newSingleThreadExecutor());
+                } catch (IOException e) {
+                    throw new UnableToConfigureServerException(e);
+                }
+
+                internalTaskExecutor.execute(networkWriteTask);
+                serverSocketChannel = AsynchronousServerSocketChannel
+                        .open(channelGroup)
+                        .bind(networkConfiguration.getServerAddress());
+
+                serverSocketChannel.accept(ByteBuffer.allocate(internalsConfiguration.getBufferSizeBytes()), networkAcceptHandler());
+
+                final var duration = Duration.between(start, LocalDateTime.now());
+                log.debug(
+                        "Started {} instance on port {} after {} ms",
+                        getClass().getSimpleName(),
+                        networkConfiguration.getBindPort(),
+                        duration.toMillis()
+                );
             } catch (IOException e) {
                 throw new UnableToConfigureServerException(e);
             }
-
-            internalTaskExecutor.execute(networkWriteTask);
-            serverSocketChannel = AsynchronousServerSocketChannel
-                    .open(channelGroup)
-                    .bind(networkConfiguration.getServerAddress());
-
-            serverSocketChannel.accept(ByteBuffer.allocate(internalsConfiguration.getBufferSizeBytes()), networkAcceptHandler());
-
-            final var duration = Duration.between(start, LocalDateTime.now());
-            log.debug(
-                    "Started {} instance on port {} after {} ms",
-                    getClass().getSimpleName(),
-                    networkConfiguration.getBindPort(),
-                    duration.toMillis()
-            );
-        } catch (IOException e) {
-            throw new UnableToConfigureServerException(e);
         }
     }
 
     // TODO: Wait for messages to be drained
     @Override
     public void stop(Throwable reason) {
-        log.debug("Stopping server with reason: {}", reason.getMessage());
-        stopping.set(true);
-        networkClientRepository.getClients().forEach(networkClient -> disconnect(networkClient, reason));
+        if (stopping.compareAndSet(false, true)) {
+            log.debug("Stopping server with reason: {}", reason.getMessage());
+            networkClientRepository.getClients().forEach(networkClient -> disconnect(networkClient, reason));
+            channelGroup.shutdown();
+            internalTaskExecutor.shutdown();
+            ChannelUtils.close(serverSocketChannel);
+        }
     }
 
     @Override

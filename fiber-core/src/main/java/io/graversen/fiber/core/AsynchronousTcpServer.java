@@ -15,6 +15,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -23,11 +24,11 @@ import java.util.function.Consumer;
 public abstract class AsynchronousTcpServer implements IServer {
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
-    private final BlockingQueue<NetworkPayload> networkOutQueue;
-    private final IEventBus eventBus;
-    private final ITcpNetworkClientRepository networkClientRepository;
     private final ServerNetworkConfiguration networkConfiguration;
     private final ServerInternalsConfiguration internalsConfiguration;
+    private final IEventBus eventBus;
+    private final ITcpNetworkClientRepository networkClientRepository;
+    private final BlockingQueue<NetworkPayload> networkOutQueue;
     private final NetworkWriteTask networkWriteTask;
     private final ExecutorService internalTaskExecutor;
 
@@ -35,16 +36,16 @@ public abstract class AsynchronousTcpServer implements IServer {
     private AsynchronousServerSocketChannel serverSocketChannel;
 
     public AsynchronousTcpServer(
-            ServerNetworkConfiguration serverNetworkConfiguration,
-            ServerInternalsConfiguration serverInternalsConfiguration,
+            ServerNetworkConfiguration networkConfiguration,
+            ServerInternalsConfiguration internalsConfiguration,
             IEventBus eventBus,
             ITcpNetworkClientRepository networkClientRepository
     ) {
+        this.networkConfiguration = Objects.requireNonNull(networkConfiguration, "Parameter 'networkConfiguration' must not be null");
+        this.internalsConfiguration = Objects.requireNonNull(internalsConfiguration, "Parameter 'internalsConfiguration' must not be null");
+        this.eventBus = Objects.requireNonNull(eventBus, "Parameter 'eventBus' must not be null");
+        this.networkClientRepository = Objects.requireNonNull(networkClientRepository, "Parameter 'eventClass' must not be null");
         this.networkOutQueue = new LinkedBlockingQueue<>();
-        this.eventBus = eventBus;
-        this.networkClientRepository = networkClientRepository;
-        this.networkConfiguration = serverNetworkConfiguration;
-        this.internalsConfiguration = serverInternalsConfiguration;
         this.networkWriteTask = new NetworkWriteTask();
         this.internalTaskExecutor = Executors.newSingleThreadExecutor();
         log.debug("Initialized {} instance", getClass().getSimpleName());

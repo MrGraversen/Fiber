@@ -1,42 +1,39 @@
 package io.graversen.fiber.utils;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.Duration;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
-public abstract class ControllableTaskLoop implements Runnable {
-    private final ReentrantLock lock;
-    private final Condition hasAdditionalTasks;
-    private final long lockTimeoutMillis;
-
+@Slf4j
+public abstract class ControllableTaskLoop<T> implements Runnable {
+    private static final Object LOCK = new Object();
+    private static final long LOCK_TIMEOUT = Duration.ofSeconds(1).toMillis();
     private volatile boolean running = true;
-
-    public ControllableTaskLoop(Duration lockTimeout) {
-        this.lock = new ReentrantLock();
-        this.hasAdditionalTasks = lock.newCondition();
-        this.lockTimeoutMillis = lockTimeout.toMillis();
-    }
 
     @Override
     public void run() {
-        try {
-            while (!Thread.currentThread().isInterrupted()) {
-                if (running) {
-                    try {
-                        performTask();
-                    } catch (Exception e) {
-                        taskFailed(e);
+        while (!Thread.currentThread().isInterrupted()) {
+            if (running) {
+                try {
+                    final var next = awaitNext();
+                    performTask(next);
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    } else {
+                        log.error(e.getMessage(), e);
                     }
                 }
-
-                synchronized (lock) {
-                    lock.wait(lockTimeoutMillis);
+            } else {
+                synchronized (LOCK) {
+                    try {
+                        LOCK.wait(LOCK_TIMEOUT);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
-        } catch (Exception e) {
-            // Ignore
         }
-
     }
 
     public void pause() {
@@ -47,11 +44,15 @@ public abstract class ControllableTaskLoop implements Runnable {
         running = true;
     }
 
-    protected Object getLock() {
-        return lock;
+    public void hint() {
+        synchronized (LOCK) {
+            LOCK.notify();
+        }
     }
 
-    public abstract void performTask();
+    public abstract void performTask(T nextItem);
 
     public abstract void taskFailed(Exception exception);
+
+    public abstract T awaitNext() throws InterruptedException;
 }

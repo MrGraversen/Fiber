@@ -1,14 +1,14 @@
 package io.graversen.fiber.event;
 
-@FunctionalInterface
-public interface IEventListener<T extends IEvent> {
+public interface IErrorHandlingEventListener<T extends IEvent> extends IEventListener<T> {
+    @Override
     default void propagate(IEvent event) {
         try {
             onEvent((T) event);
         } catch (Exception e) {
-            // Omitted
+            onEventError(e);
         }
     }
 
-    void onEvent(T event);
+    void onEventError(Throwable reason);
 }

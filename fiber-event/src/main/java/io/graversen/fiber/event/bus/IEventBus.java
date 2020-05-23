@@ -18,8 +18,6 @@ public interface IEventBus {
 
     void emitEvent(IEvent event);
 
-    int getThreadPoolSize();
-
     void start();
 
     void pause();

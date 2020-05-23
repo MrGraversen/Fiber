@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -24,8 +25,8 @@ public class DefaultEventBus implements IEventBus {
 
     private ThreadPoolExecutor threadPoolExecutor;
 
-    private volatile boolean active = false;
-    private volatile boolean pause = false;
+    private AtomicBoolean active = new AtomicBoolean(false);
+    private AtomicBoolean pause = new AtomicBoolean(false);
 
     public DefaultEventBus() {
         this.cachedThreadPoolSize = getThreadPoolSize();
@@ -101,13 +102,8 @@ public class DefaultEventBus implements IEventBus {
     }
 
     @Override
-    public int getThreadPoolSize() {
-        return FiberEnvironment.availableProcessors();
-    }
-
-    @Override
     public void start() {
-        if (!active) {
+        if (active.compareAndSet(false, true)) {
             if (threadPoolExecutor != null) {
                 threadPoolExecutor.shutdownNow();
                 threadPoolExecutor = null;
@@ -121,25 +117,23 @@ public class DefaultEventBus implements IEventBus {
                 eventPropagatorStore.put(i, eventPropagator);
                 threadPoolExecutor.execute(eventPropagator);
             });
-
-            active = true;
         }
     }
 
     @Override
     public void pause() {
-        pause = true;
+        pause.set(true);
     }
 
     @Override
     public void resume() {
-        pause = false;
+        pause.set(false);
     }
 
     @Override
     public void purgeAll() {
-        if (threadPoolExecutor != null && active) {
-            final boolean pausedBefore = pause;
+        if (threadPoolExecutor != null && active.get()) {
+            final boolean pausedBefore = pause.get();
             if (!pausedBefore) pause();
 
             final BlockingQueue<Runnable> queue = threadPoolExecutor.getQueue();
@@ -160,14 +154,12 @@ public class DefaultEventBus implements IEventBus {
 
     @Override
     public void stop(boolean gracefully) {
-        if (active) {
+        if (active.compareAndSet(true, false)) {
             if (gracefully) {
                 threadPoolExecutor.shutdownNow();
             } else {
                 threadPoolExecutor.shutdown();
             }
-
-            active = false;
 
             eventPropagatorStore.forEach((i, eventPropagator) -> {
                 synchronized (eventPropagator.LOCK) {
@@ -182,6 +174,10 @@ public class DefaultEventBus implements IEventBus {
         this.stop(false);
     }
 
+    public int getThreadPoolSize() {
+        return FiberEnvironment.availableProcessors();
+    }
+
     class EventPropagator implements Runnable {
         final Object LOCK = new Object();
 
@@ -189,7 +185,7 @@ public class DefaultEventBus implements IEventBus {
         public void run() {
             try {
                 while (!Thread.currentThread().isInterrupted()) {
-                    if (!pause) {
+                    if (!pause.get()) {
                         for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet()) {
                             final var eventQueue = eventQueueStore.computeIfAbsent(eventClass, e -> new ConcurrentLinkedQueue<>());
                             final IEvent event = eventQueue.poll();

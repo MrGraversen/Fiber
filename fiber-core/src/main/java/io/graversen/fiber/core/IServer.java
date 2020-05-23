@@ -2,16 +2,14 @@ package io.graversen.fiber.core;
 
 import io.graversen.fiber.utils.IClient;
 
-import java.nio.ByteBuffer;
-
 public interface IServer {
     void start();
 
-    void stop(Exception reason, boolean gently);
+    void stop(Throwable reason);
 
-    void disconnect(IClient client, Exception reason);
+    void disconnect(IClient client, Throwable reason);
 
-    void broadcast(ByteBuffer message);
+    void broadcast(byte[] message);
 
-    void send(IClient client, ByteBuffer message);
+    void send(IClient client, byte[] message);
 }

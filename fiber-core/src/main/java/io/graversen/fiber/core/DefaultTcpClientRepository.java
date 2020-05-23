@@ -28,6 +28,7 @@ public class DefaultTcpClientRepository implements ITcpNetworkClientRepository {
 
     @Override
     public Optional<ITcpNetworkClient> removeClient(IClient client) {
+        tcpNetworkClients.remove(client.id());
         return Optional.empty();
     }
 

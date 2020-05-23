@@ -6,6 +6,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public interface ITcpNetworkClient extends IClient {
     ClientNetworkDetails networkDetails();
@@ -19,4 +20,8 @@ public interface ITcpNetworkClient extends IClient {
     Map<String, Object> attributes();
 
     AsynchronousSocketChannel socketChannel();
+
+    AtomicBoolean pending();
+
+    void close();
 }

@@ -9,19 +9,17 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.channels.AsynchronousServerSocketChannel;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
+import java.nio.channels.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @Slf4j
-public abstract class AsynchronousTcpServer implements IServer {
+public class AsynchronousTcpServer implements IServer {
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final ServerNetworkConfiguration networkConfiguration;
@@ -29,6 +27,7 @@ public abstract class AsynchronousTcpServer implements IServer {
     private final IEventBus eventBus;
     private final ITcpNetworkClientRepository networkClientRepository;
     private final BlockingQueue<NetworkPayload> networkOutQueue;
+    private final ConcurrentMap<IClient, BlockingQueue<NetworkPayload>> clientIntermediateQueues;
     private final NetworkWriteTask networkWriteTask;
     private final ExecutorService internalTaskExecutor;
 
@@ -46,6 +45,7 @@ public abstract class AsynchronousTcpServer implements IServer {
         this.eventBus = Objects.requireNonNull(eventBus, "Parameter 'eventBus' must not be null");
         this.networkClientRepository = Objects.requireNonNull(networkClientRepository, "Parameter 'eventClass' must not be null");
         this.networkOutQueue = new LinkedBlockingQueue<>();
+        this.clientIntermediateQueues = new ConcurrentHashMap<>();
         this.networkWriteTask = new NetworkWriteTask();
         this.internalTaskExecutor = Executors.newSingleThreadExecutor();
         log.debug("Initialized {} instance", getClass().getSimpleName());
@@ -62,6 +62,8 @@ public abstract class AsynchronousTcpServer implements IServer {
                 } catch (IOException e) {
                     throw new UnableToConfigureServerException(e);
                 }
+
+                eventBus.start();
 
                 internalTaskExecutor.execute(networkWriteTask);
                 serverSocketChannel = AsynchronousServerSocketChannel
@@ -101,6 +103,7 @@ public abstract class AsynchronousTcpServer implements IServer {
             networkClientRepository.getClient(client).ifPresent(networkClient -> {
                 log.debug("Client {} disconnected: {}", client.id(), reason.getMessage());
                 networkClient.close();
+                clientIntermediateQueues.remove(client);
                 networkClientRepository.removeClient(networkClient);
             });
         } catch (Exception e) {
@@ -113,36 +116,37 @@ public abstract class AsynchronousTcpServer implements IServer {
         networkClientRepository.getClients().forEach(networkClient -> send(networkClient, message));
     }
 
-    // ByteBuffer must adhere to buffer size
-    // Take in byte array, split into buffer sized chunks
-    // Add all to queue
     @Override
     public void send(IClient client, byte[] message) {
         if (!stopping.get()) {
-            networkOutQueue.offer(new NetworkPayload(ByteBuffer.wrap(message), client));
+            for (int i = 0; i < message.length; ) {
+                final byte[] messagePart = Arrays.copyOfRange(message, i, i + internalsConfiguration.getBufferSizeBytes());
+                networkOutQueue.offer(new NetworkPayload(ByteBuffer.wrap(messagePart), client));
+                i += internalsConfiguration.getBufferSizeBytes();
+            }
             networkWriteTask.hint();
         }
     }
 
     Consumer<ITcpNetworkClient> doSend(NetworkPayload networkPayload) {
         return networkClient -> {
-            if (networkClient.socketChannel().isOpen()) {
-                final var socketChannel = networkClient.socketChannel();
-                final boolean clientReady = networkClient.pending().compareAndSet(false, true);
-                final boolean queueExhausted = networkPayload.getRequeueCount().get() >= internalsConfiguration.getMaximumNetworkRequeue();
-                if (clientReady || queueExhausted) {
-                    if (queueExhausted) {
-                        log.debug("Maximum message requeue exhausted, bypassing queue");
-                    }
-
+            final var socketChannel = networkClient.socketChannel();
+            if (socketChannel.isOpen()) {
+                try {
+                    networkClient.pending().set(true);
                     socketChannel.write(networkPayload.getByteBuffer(), networkClient, networkWriteHandler());
-                } else {
-                    log.debug("Client occupied, returning network payload to queue");
-                    networkPayload.registerRequeue();
-                    networkOutQueue.offer(networkPayload);
+                } catch (WritePendingException wpe) {
+                    log.debug("Underlying channel not ready for write; rescheduling on intermediate queue");
+                    putOnClientQueue(networkPayload);
                 }
             }
         };
+    }
+
+    void putOnClientQueue(NetworkPayload networkPayload) {
+        networkPayload.registerRequeue();
+        final var clientQueue = clientIntermediateQueues.computeIfAbsent(networkPayload.getClient(), client -> new LinkedBlockingQueue<>());
+        clientQueue.offer(networkPayload);
     }
 
     Runnable handleClientUnavailable() {
@@ -206,6 +210,13 @@ public abstract class AsynchronousTcpServer implements IServer {
 
                 if (result == -1) {
                     disconnect(networkClient, new IOException("Client disconnect"));
+                }
+
+                // TODO: Avoid multiple initializations
+                final var queue = clientIntermediateQueues.computeIfAbsent(networkClient, client -> new LinkedBlockingQueue<>());
+                final var nextNetworkPayloadOrNull = queue.poll();
+                if (nextNetworkPayloadOrNull != null) {
+                    networkOutQueue.offer(nextNetworkPayloadOrNull);
                 }
             }
 

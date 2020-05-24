@@ -1,10 +1,10 @@
 package io.graversen.fiber.core.tcp;
 
-import io.graversen.fiber.core.*;
-import io.graversen.fiber.event.bus.IEventBus;
+import io.graversen.fiber.core.INetworkHooks;
+import io.graversen.fiber.core.IServer;
+import io.graversen.fiber.core.NetworkMessage;
 import io.graversen.fiber.utils.ChannelUtils;
 import io.graversen.fiber.utils.ControllableTaskLoop;
-import io.graversen.fiber.utils.IClient;
 import io.graversen.fiber.utils.IdUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,12 +22,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @Slf4j
-public class AsynchronousTcpServer implements IServer {
+public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final ServerNetworkConfiguration networkConfiguration;
     private final ServerInternalsConfiguration internalsConfiguration;
-    private final IEventBus eventBus;
     private final ITcpNetworkClientRepository networkClientRepository;
     private final NetworkQueue networkOutQueue;
     private final ClientQueues clientQueues;
@@ -36,16 +35,15 @@ public class AsynchronousTcpServer implements IServer {
 
     private AsynchronousChannelGroup channelGroup;
     private AsynchronousServerSocketChannel serverSocketChannel;
+    private INetworkHooks<ITcpNetworkClient> networkHooks;
 
     public AsynchronousTcpServer(
             ServerNetworkConfiguration networkConfiguration,
             ServerInternalsConfiguration internalsConfiguration,
-            IEventBus eventBus,
             ITcpNetworkClientRepository networkClientRepository
     ) {
         this.networkConfiguration = Objects.requireNonNull(networkConfiguration, "Parameter 'networkConfiguration' must not be null");
         this.internalsConfiguration = Objects.requireNonNull(internalsConfiguration, "Parameter 'internalsConfiguration' must not be null");
-        this.eventBus = Objects.requireNonNull(eventBus, "Parameter 'eventBus' must not be null");
         this.networkClientRepository = Objects.requireNonNull(networkClientRepository, "Parameter 'eventClass' must not be null");
         this.networkOutQueue = new NetworkQueue();
         this.clientQueues = new ClientQueues();
@@ -55,8 +53,10 @@ public class AsynchronousTcpServer implements IServer {
     }
 
     @Override
-    public void start() {
+    public void start(INetworkHooks<ITcpNetworkClient> networkHooks) {
         if (started.compareAndSet(false, true)) {
+            this.networkHooks = Objects.requireNonNull(networkHooks, "Parameter 'networkHooks' must not be null");
+
             try {
                 final var start = LocalDateTime.now();
 
@@ -65,8 +65,6 @@ public class AsynchronousTcpServer implements IServer {
                 } catch (IOException e) {
                     throw new UnableToConfigureServerException(e);
                 }
-
-                eventBus.start();
 
                 internalTaskExecutor.execute(networkWriteTask);
                 serverSocketChannel = AsynchronousServerSocketChannel
@@ -77,7 +75,7 @@ public class AsynchronousTcpServer implements IServer {
 
                 final var duration = Duration.between(start, LocalDateTime.now());
                 log.debug(
-                        "Started {} instance on port {} after {} ms",
+                        "Started server instance {} on port {} after {} ms",
                         getClass().getSimpleName(),
                         networkConfiguration.getBindPort(),
                         duration.toMillis()
@@ -85,10 +83,11 @@ public class AsynchronousTcpServer implements IServer {
             } catch (IOException e) {
                 throw new UnableToConfigureServerException(e);
             }
+        } else {
+            log.warn("Server instance {} already started!", getClass().getSimpleName());
         }
     }
 
-    // TODO: Wait for messages to be drained
     @Override
     public void stop(Throwable reason) {
         if (stopping.compareAndSet(false, true)) {
@@ -101,7 +100,7 @@ public class AsynchronousTcpServer implements IServer {
     }
 
     @Override
-    public void disconnect(IClient client, Throwable reason) {
+    public void disconnect(ITcpNetworkClient client, Throwable reason) {
         try {
             networkClientRepository.getClient(client).ifPresent(networkClient -> {
                 log.debug("Client {} disconnected: {}", client.id(), reason.getMessage());
@@ -120,18 +119,18 @@ public class AsynchronousTcpServer implements IServer {
     }
 
     @Override
-    public void send(IClient client, byte[] message) {
+    public void send(ITcpNetworkClient client, byte[] message) {
         if (!stopping.get()) {
             for (int i = 0; i < message.length; ) {
                 final byte[] messagePart = Arrays.copyOfRange(message, i, i + internalsConfiguration.getBufferSizeBytes());
-                networkOutQueue.offer(new NetworkPayload(ByteBuffer.wrap(messagePart), client));
+                networkOutQueue.offer(new NetworkQueuePayload(ByteBuffer.wrap(messagePart), client));
                 i += internalsConfiguration.getBufferSizeBytes();
             }
             networkWriteTask.hint();
         }
     }
 
-    Consumer<ITcpNetworkClient> doSend(NetworkPayload networkPayload) {
+    Consumer<ITcpNetworkClient> doSend(NetworkQueuePayload networkPayload) {
         return networkClient -> {
             final var socketChannel = networkClient.socketChannel();
             if (socketChannel.isOpen()) {
@@ -146,7 +145,7 @@ public class AsynchronousTcpServer implements IServer {
         };
     }
 
-    void putOnClientQueue(NetworkPayload networkPayload) {
+    void putOnClientQueue(NetworkQueuePayload networkPayload) {
         networkPayload.registerRequeue();
         final var clientQueue = clientQueues.getClientQueue(networkPayload.getClient());
         clientQueue.offer(networkPayload);
@@ -187,10 +186,10 @@ public class AsynchronousTcpServer implements IServer {
             public void completed(Integer result, ITcpNetworkClient networkClient) {
                 if (result > 0) {
                     readBuffer.flip();
-                    final byte[] data = new byte[readBuffer.remaining()];
-                    readBuffer.get(data);
+                    final byte[] message = new byte[readBuffer.remaining()];
+                    readBuffer.get(message);
 
-                    log.debug("Client {}: {}", networkClient.id(), new String(data));
+                    networkHooks.onNetworkRead(networkClient, new NetworkMessage(message, message.length));
                     networkClient.socketChannel().read(readBuffer.clear(), networkClient, this);
                 } else if (result == -1) {
                     disconnect(networkClient, new IOException("Client disconnect"));
@@ -230,7 +229,7 @@ public class AsynchronousTcpServer implements IServer {
         };
     }
 
-    class NetworkWriteTask extends ControllableTaskLoop<NetworkPayload> {
+    class NetworkWriteTask extends ControllableTaskLoop<NetworkQueuePayload> {
         @Override
         public void run() {
             selfConfiguration();
@@ -238,7 +237,7 @@ public class AsynchronousTcpServer implements IServer {
         }
 
         @Override
-        public void performTask(NetworkPayload nextItem) {
+        public void performTask(NetworkQueuePayload nextItem) {
             try {
                 networkClientRepository.getClient(nextItem.getClient()).ifPresentOrElse(
                         doSend(nextItem),
@@ -256,7 +255,7 @@ public class AsynchronousTcpServer implements IServer {
         }
 
         @Override
-        public NetworkPayload awaitNext() throws InterruptedException {
+        public NetworkQueuePayload awaitNext() throws InterruptedException {
             return networkOutQueue.take();
         }
 

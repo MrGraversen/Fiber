@@ -1,5 +1,6 @@
-package io.graversen.fiber.core;
+package io.graversen.fiber.core.tcp;
 
+import io.graversen.fiber.core.NetworkPayload;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 

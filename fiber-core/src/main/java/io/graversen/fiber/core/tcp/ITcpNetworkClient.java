@@ -1,4 +1,4 @@
-package io.graversen.fiber.core;
+package io.graversen.fiber.core.tcp;
 
 import io.graversen.fiber.utils.IClient;
 

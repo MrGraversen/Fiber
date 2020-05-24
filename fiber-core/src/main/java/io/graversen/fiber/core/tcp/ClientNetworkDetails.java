@@ -1,4 +1,4 @@
-package io.graversen.fiber.core;
+package io.graversen.fiber.core.tcp;
 
 import lombok.NonNull;
 import lombok.Value;

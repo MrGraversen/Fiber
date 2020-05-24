@@ -14,7 +14,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -26,8 +28,8 @@ public class AsynchronousTcpServer implements IServer {
     private final ServerInternalsConfiguration internalsConfiguration;
     private final IEventBus eventBus;
     private final ITcpNetworkClientRepository networkClientRepository;
-    private final BlockingQueue<NetworkPayload> networkOutQueue;
-    private final ConcurrentMap<IClient, BlockingQueue<NetworkPayload>> clientIntermediateQueues;
+    private final NetworkQueue networkOutQueue;
+    private final ClientQueues clientQueues;
     private final NetworkWriteTask networkWriteTask;
     private final ExecutorService internalTaskExecutor;
 
@@ -44,8 +46,8 @@ public class AsynchronousTcpServer implements IServer {
         this.internalsConfiguration = Objects.requireNonNull(internalsConfiguration, "Parameter 'internalsConfiguration' must not be null");
         this.eventBus = Objects.requireNonNull(eventBus, "Parameter 'eventBus' must not be null");
         this.networkClientRepository = Objects.requireNonNull(networkClientRepository, "Parameter 'eventClass' must not be null");
-        this.networkOutQueue = new LinkedBlockingQueue<>();
-        this.clientIntermediateQueues = new ConcurrentHashMap<>();
+        this.networkOutQueue = new NetworkQueue();
+        this.clientQueues = new ClientQueues();
         this.networkWriteTask = new NetworkWriteTask();
         this.internalTaskExecutor = Executors.newSingleThreadExecutor();
         log.debug("Initialized {} instance", getClass().getSimpleName());
@@ -103,7 +105,7 @@ public class AsynchronousTcpServer implements IServer {
             networkClientRepository.getClient(client).ifPresent(networkClient -> {
                 log.debug("Client {} disconnected: {}", client.id(), reason.getMessage());
                 networkClient.close();
-                clientIntermediateQueues.remove(client);
+                clientQueues.remove(client);
                 networkClientRepository.removeClient(networkClient);
             });
         } catch (Exception e) {
@@ -145,7 +147,7 @@ public class AsynchronousTcpServer implements IServer {
 
     void putOnClientQueue(NetworkPayload networkPayload) {
         networkPayload.registerRequeue();
-        final var clientQueue = clientIntermediateQueues.computeIfAbsent(networkPayload.getClient(), client -> new LinkedBlockingQueue<>());
+        final var clientQueue = clientQueues.getClientQueue(networkPayload.getClient());
         clientQueue.offer(networkPayload);
     }
 
@@ -212,9 +214,8 @@ public class AsynchronousTcpServer implements IServer {
                     disconnect(networkClient, new IOException("Client disconnect"));
                 }
 
-                // TODO: Avoid multiple initializations
-                final var queue = clientIntermediateQueues.computeIfAbsent(networkClient, client -> new LinkedBlockingQueue<>());
-                final var nextNetworkPayloadOrNull = queue.poll();
+                final var clientQueue = clientQueues.getClientQueue(networkClient);
+                final var nextNetworkPayloadOrNull = clientQueue.poll();
                 if (nextNetworkPayloadOrNull != null) {
                     networkOutQueue.offer(nextNetworkPayloadOrNull);
                 }

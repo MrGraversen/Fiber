@@ -6,7 +6,7 @@ public class DefaultAsynchronousTcpServer extends AsynchronousTcpServer {
     public DefaultAsynchronousTcpServer(ServerNetworkConfiguration serverNetworkConfiguration) {
         super(
                 serverNetworkConfiguration,
-                new ServerInternalsConfiguration(8192, 25),
+                new ServerInternalsConfiguration(32768),
                 new DefaultEventBus(),
                 new DefaultTcpClientRepository()
         );

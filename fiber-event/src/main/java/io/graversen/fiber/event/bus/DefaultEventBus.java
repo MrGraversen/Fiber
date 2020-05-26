@@ -22,11 +22,10 @@ public class DefaultEventBus implements IEventBus {
     private final Map<Integer, EventPropagator> eventPropagatorStore;
     private final AtomicInteger eventPropagatorRoundRobin;
     private final int cachedThreadPoolSize;
+    private final AtomicBoolean active = new AtomicBoolean(false);
+    private final AtomicBoolean pause = new AtomicBoolean(false);
 
     private ThreadPoolExecutor threadPoolExecutor;
-
-    private AtomicBoolean active = new AtomicBoolean(false);
-    private AtomicBoolean pause = new AtomicBoolean(false);
 
     public DefaultEventBus() {
         this.cachedThreadPoolSize = getThreadPoolSize();
@@ -117,6 +116,8 @@ public class DefaultEventBus implements IEventBus {
                 eventPropagatorStore.put(i, eventPropagator);
                 threadPoolExecutor.execute(eventPropagator);
             });
+
+            log.debug("Started {} instance", getClass().getSimpleName());
         }
     }
 

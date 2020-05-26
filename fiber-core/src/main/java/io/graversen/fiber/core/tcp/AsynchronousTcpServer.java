@@ -96,6 +96,8 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
             channelGroup.shutdown();
             internalTaskExecutor.shutdown();
             ChannelUtils.close(serverSocketChannel);
+        } else {
+            log.warn("Server instance {} already stopping!", getClass().getSimpleName());
         }
     }
 
@@ -107,9 +109,10 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
                 networkClient.close();
                 clientQueues.remove(client);
                 networkClientRepository.removeClient(networkClient);
+                networkHooks.onClientDisconnected(client, reason);
             });
         } catch (Exception e) {
-            // Nothing
+            // Nothing useful to do here
         }
     }
 
@@ -122,11 +125,13 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     public void send(ITcpNetworkClient client, byte[] message) {
         if (!stopping.get()) {
             for (int i = 0; i < message.length; ) {
-                final byte[] messagePart = Arrays.copyOfRange(message, i, i + internalsConfiguration.getBufferSizeBytes());
+                final byte[] messagePart = Arrays.copyOfRange(message, i, i + Math.min(message.length, internalsConfiguration.getBufferSizeBytes()));
                 networkOutQueue.offer(new NetworkQueuePayload(ByteBuffer.wrap(messagePart), client));
                 i += internalsConfiguration.getBufferSizeBytes();
             }
             networkWriteTask.hint();
+        } else {
+            log.warn("Server instance {} stopping; can't send further messages!", getClass().getSimpleName());
         }
     }
 
@@ -136,9 +141,10 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
             if (socketChannel.isOpen()) {
                 try {
                     networkClient.pending().set(true);
-                    socketChannel.write(networkPayload.getByteBuffer(), networkClient, networkWriteHandler());
+                    final var byteBuffer = networkPayload.getByteBuffer();
+                    socketChannel.write(byteBuffer, networkClient, networkWriteHandler(byteBuffer));
                 } catch (WritePendingException wpe) {
-                    log.debug("Underlying channel not ready for write; rescheduling on intermediate queue");
+                    log.debug("Client {} nderlying channel not ready for write; rescheduling on intermediate queue", networkClient.id());
                     putOnClientQueue(networkPayload);
                 }
             }
@@ -171,6 +177,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
                 networkClientRepository.addClient(networkClient);
                 socketChannel.read(readBuffer, networkClient, networkReadHandler(readBuffer));
                 serverSocketChannel.accept(readBuffer, this);
+                networkHooks.onClientConnected(networkClient);
             }
 
             @Override
@@ -192,7 +199,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
                     networkHooks.onNetworkRead(networkClient, new NetworkMessage(message, message.length));
                     networkClient.socketChannel().read(readBuffer.clear(), networkClient, this);
                 } else if (result == -1) {
-                    disconnect(networkClient, new IOException("Client disconnect"));
+                    disconnect(networkClient, new IOException("Disconnect from client endpoint"));
                 }
             }
 
@@ -204,15 +211,17 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
         };
     }
 
-    CompletionHandler<Integer, ITcpNetworkClient> networkWriteHandler() {
+    CompletionHandler<Integer, ITcpNetworkClient> networkWriteHandler(ByteBuffer message) {
         return new CompletionHandler<>() {
             @Override
             public void completed(Integer result, ITcpNetworkClient networkClient) {
                 networkClient.pending().set(false);
 
                 if (result == -1) {
-                    disconnect(networkClient, new IOException("Client disconnect"));
+                    disconnect(networkClient, new IOException("Disconnect from client endpoint"));
                 }
+
+                networkHooks.onNetworkWrite(networkClient, new NetworkMessage(message.array(), message.array().length));
 
                 final var clientQueue = clientQueues.getClientQueue(networkClient);
                 final var nextNetworkPayloadOrNull = clientQueue.poll();

@@ -9,5 +9,5 @@ public interface INetworkHooks<C extends IClient> {
 
     void onClientConnected(C client);
 
-    void onClientDisconnected(C client);
+    void onClientDisconnected(C client, Throwable reason);
 }

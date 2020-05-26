@@ -1,5 +1,6 @@
 package io.graversen.fiber.core;
 
+import io.graversen.fiber.core.hooks.INetworkHooks;
 import io.graversen.fiber.utils.IClient;
 
 public interface IServer<C extends IClient> {

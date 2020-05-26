@@ -12,6 +12,7 @@ public abstract class ControllableTaskLoop<T> implements Runnable {
 
     @Override
     public void run() {
+        Thread.currentThread().setName(threadName());
         while (!Thread.currentThread().isInterrupted()) {
             if (running) {
                 try {
@@ -21,7 +22,7 @@ public abstract class ControllableTaskLoop<T> implements Runnable {
                     if (e instanceof InterruptedException) {
                         Thread.currentThread().interrupt();
                     } else {
-                        log.error(e.getMessage(), e);
+                        taskFailed(e);
                     }
                 }
             } else {
@@ -52,7 +53,13 @@ public abstract class ControllableTaskLoop<T> implements Runnable {
 
     public abstract void performTask(T nextItem);
 
-    public abstract void taskFailed(Exception exception);
+    public void taskFailed(Exception exception) {
+        log.error(exception.getMessage(), exception);
+    }
 
     public abstract T awaitNext() throws InterruptedException;
+
+    public String threadName() {
+        return String.format("%s-%d", getClass().getSimpleName(), Thread.currentThread().getId());
+    }
 }

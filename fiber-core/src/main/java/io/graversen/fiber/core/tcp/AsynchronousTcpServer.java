@@ -181,28 +181,4 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
             }
         };
     }
-
-    CompletionHandler<Integer, ITcpNetworkClient> networkReadHandler(ByteBuffer readBuffer) {
-        return new CompletionHandler<>() {
-            @Override
-            public void completed(Integer result, ITcpNetworkClient networkClient) {
-                if (result > 0) {
-                    readBuffer.flip();
-                    final byte[] message = new byte[readBuffer.remaining()];
-                    readBuffer.get(message);
-
-                    networkHooksDispatcher.enqueue(new NetworkRead<>(networkClient, new NetworkMessage(message, message.length)));
-                    networkClient.socketChannel().read(readBuffer.clear(), networkClient, this);
-                } else if (result == -1) {
-                    disconnect(networkClient, new IOException("Disconnect from client endpoint"));
-                }
-            }
-
-            @Override
-            public void failed(Throwable throwable, ITcpNetworkClient networkClient) {
-                log.error("Client {} network read error: {}", networkClient.id(), throwable.getMessage());
-                disconnect(networkClient, throwable);
-            }
-        };
-    }
 }

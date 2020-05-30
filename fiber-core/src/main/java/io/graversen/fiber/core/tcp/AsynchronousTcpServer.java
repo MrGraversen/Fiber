@@ -205,33 +205,4 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
             }
         };
     }
-
-    CompletionHandler<Integer, ITcpNetworkClient> networkWriteHandler(ByteBuffer message) {
-        return new CompletionHandler<>() {
-            @Override
-            public void completed(Integer result, ITcpNetworkClient networkClient) {
-                networkClient.pending().set(false);
-
-                if (result == -1) {
-                    disconnect(networkClient, new IOException("Disconnect from client endpoint"));
-                }
-
-                networkHooksDispatcher.enqueue(
-                        new NetworkWrite<>(networkClient, new NetworkMessage(message.array(), message.array().length))
-                );
-
-                final var clientQueue = clientQueues.getClientQueue(networkClient);
-                final var nextNetworkPayloadOrNull = clientQueue.poll();
-                if (nextNetworkPayloadOrNull != null) {
-                    networkOutQueue.offer(nextNetworkPayloadOrNull);
-                }
-            }
-
-            @Override
-            public void failed(Throwable throwable, ITcpNetworkClient networkClient) {
-                log.error("Client {} network write error: {}", networkClient.id(), throwable.getMessage());
-                disconnect(networkClient, throwable);
-            }
-        };
-    }
 }

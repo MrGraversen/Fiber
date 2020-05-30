@@ -13,11 +13,11 @@ import java.util.function.Consumer;
 
 @Slf4j
 @RequiredArgsConstructor
-public class NetworkAcceptHandler implements CompletionHandler<AsynchronousSocketChannel, ByteBuffer> {
+public class NetworkAcceptHandler implements CompletionHandler<AsynchronousSocketChannel, Void> {
     private final Consumer<ITcpNetworkClient> networkClientAcceptCallback;
 
     @Override
-    public void completed(AsynchronousSocketChannel socketChannel, ByteBuffer readBuffer) {
+    public void completed(AsynchronousSocketChannel socketChannel, Void attachment) {
         final var networkClient = new TcpNetworkClient(
                 IdUtils.fastClientId(),
                 ClientNetworkDetails.from(socketChannel),
@@ -31,7 +31,7 @@ public class NetworkAcceptHandler implements CompletionHandler<AsynchronousSocke
     }
 
     @Override
-    public void failed(Throwable throwable, ByteBuffer readBuffer) {
+    public void failed(Throwable throwable, Void attachment) {
         log.error(throwable.getMessage(), throwable);
     }
 }

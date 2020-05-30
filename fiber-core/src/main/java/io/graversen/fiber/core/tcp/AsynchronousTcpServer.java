@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
-public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
+public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final ServerNetworkConfiguration networkConfiguration;
@@ -45,7 +45,7 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
             ServerNetworkConfiguration networkConfiguration,
             ServerInternalsConfiguration internalsConfiguration,
             ITcpNetworkClientRepository networkClientRepository,
-            NetworkQueue networkOutQueue,
+            NetworkQueue networkQueue,
             ClientQueues clientQueues,
             NetworkWriteTask networkWriteTask,
             ExecutorService internalTaskExecutor,
@@ -56,7 +56,7 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
         this.networkConfiguration = Checks.nonNull(networkConfiguration, "networkConfiguration");
         this.internalsConfiguration = Checks.nonNull(internalsConfiguration, "internalsConfiguration");
         this.networkClientRepository = Checks.nonNull(networkClientRepository, "networkClientRepository");
-        this.networkOutQueue = Checks.nonNull(networkOutQueue, "networkOutQueue");
+        this.networkOutQueue = Checks.nonNull(networkQueue, "networkQueue");
         this.clientQueues = Checks.nonNull(clientQueues, "clientQueues");
         this.networkWriteTask = Checks.nonNull(networkWriteTask, "networkWriteTask");
         this.internalTaskExecutor = Checks.nonNull(internalTaskExecutor, "internalTaskExecutor");
@@ -82,14 +82,13 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
                         .open(channelGroup)
                         .bind(networkConfiguration.getServerAddress());
 
-                serverSocketChannel.accept(ByteBuffer.allocate(internalsConfiguration.getBufferSizeBytes()), networkAcceptHandler);
+                serverSocketChannel.accept(null, networkAcceptHandler);
 
-                final var duration = Duration.between(start, LocalDateTime.now());
                 log.debug(
                         "Started server instance {} on port {} after {} ms",
                         getClass().getSimpleName(),
                         networkConfiguration.getBindPort(),
-                        duration.toMillis()
+                        Duration.between(start, LocalDateTime.now()).toMillis()
                 );
             } catch (IOException e) {
                 throw new UnableToConfigureServerException(e);
@@ -136,7 +135,8 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
     public void send(ITcpNetworkClient client, byte[] message) {
         if (!stopping.get()) {
             for (int i = 0; i < message.length; ) {
-                final byte[] messagePart = Arrays.copyOfRange(message, i, i + Math.min(message.length, internalsConfiguration.getBufferSizeBytes()));
+                final int readOffset = i + Math.min(message.length, internalsConfiguration.getBufferSizeBytes());
+                final byte[] messagePart = Arrays.copyOfRange(message, i, readOffset);
                 networkOutQueue.offer(new NetworkQueuePayload(ByteBuffer.wrap(messagePart), client));
                 i += internalsConfiguration.getBufferSizeBytes();
             }
@@ -161,10 +161,11 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
         }
     }
 
-    public void acceptClient(ITcpNetworkClient networkClient, ByteBuffer readBuffer) {
+    public void acceptClient(ITcpNetworkClient networkClient) {
+        final var readBuffer = ByteBuffer.allocate(internalsConfiguration.getBufferSizeBytes());
         networkClientRepository.addClient(networkClient);
         networkClient.socketChannel().read(readBuffer, new ReadContext(networkClient, readBuffer), networkReadHandler);
-        serverSocketChannel.accept(readBuffer, networkAcceptHandler);
+        serverSocketChannel.accept(null, networkAcceptHandler);
         networkHooksDispatcher.enqueue(new ClientConnected<>(networkClient));
     }
 
@@ -173,5 +174,4 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
         final var clientQueue = clientQueues.getClientQueue(networkPayload.getClient());
         clientQueue.offer(networkPayload);
     }
-
 }

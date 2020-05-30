@@ -1,21 +1,23 @@
 package io.graversen.fiber.core.tcp;
 
 import io.graversen.fiber.core.IServer;
-import io.graversen.fiber.core.NetworkMessage;
-import io.graversen.fiber.core.hooks.*;
+import io.graversen.fiber.core.hooks.ClientConnected;
+import io.graversen.fiber.core.hooks.ClientDisconnected;
+import io.graversen.fiber.core.hooks.INetworkHooks;
+import io.graversen.fiber.core.hooks.NetworkHooksDispatcher;
 import io.graversen.fiber.utils.ChannelUtils;
 import io.graversen.fiber.utils.Checks;
-import io.graversen.fiber.utils.IdUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.WritePendingException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,6 +33,9 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
     private final ClientQueues clientQueues;
     private final NetworkWriteTask networkWriteTask;
     private final ExecutorService internalTaskExecutor;
+    private final NetworkAcceptHandler networkAcceptHandler;
+    private final NetworkReadHandler networkReadHandler;
+    private final NetworkWriteHandler networkWriteHandler;
 
     private AsynchronousChannelGroup channelGroup;
     private AsynchronousServerSocketChannel serverSocketChannel;
@@ -43,7 +48,10 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
             NetworkQueue networkOutQueue,
             ClientQueues clientQueues,
             NetworkWriteTask networkWriteTask,
-            ExecutorService internalTaskExecutor
+            ExecutorService internalTaskExecutor,
+            NetworkAcceptHandler networkAcceptHandler,
+            NetworkReadHandler networkReadHandler,
+            NetworkWriteHandler networkWriteHandler
     ) {
         this.networkConfiguration = Checks.nonNull(networkConfiguration, "networkConfiguration");
         this.internalsConfiguration = Checks.nonNull(internalsConfiguration, "internalsConfiguration");
@@ -52,6 +60,9 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
         this.clientQueues = Checks.nonNull(clientQueues, "clientQueues");
         this.networkWriteTask = Checks.nonNull(networkWriteTask, "networkWriteTask");
         this.internalTaskExecutor = Checks.nonNull(internalTaskExecutor, "internalTaskExecutor");
+        this.networkAcceptHandler = Checks.nonNull(networkAcceptHandler, "networkAcceptHandler");
+        this.networkReadHandler = Checks.nonNull(networkReadHandler, "networkReadHandler");
+        this.networkWriteHandler = Checks.nonNull(networkWriteHandler, "networkWriteHandler");
         log.debug("Initialized {} instance", getClass().getSimpleName());
     }
 
@@ -71,7 +82,7 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
                         .open(channelGroup)
                         .bind(networkConfiguration.getServerAddress());
 
-                serverSocketChannel.accept(ByteBuffer.allocate(internalsConfiguration.getBufferSizeBytes()), networkAcceptHandler());
+                serverSocketChannel.accept(ByteBuffer.allocate(internalsConfiguration.getBufferSizeBytes()), networkAcceptHandler);
 
                 final var duration = Duration.between(start, LocalDateTime.now());
                 log.debug(
@@ -142,12 +153,19 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
             try {
                 client.pending().set(true);
                 final var byteBuffer = payload.getByteBuffer();
-                socketChannel.write(byteBuffer, client, networkWriteHandler(byteBuffer));
+                socketChannel.write(byteBuffer, payload, networkWriteHandler);
             } catch (WritePendingException wpe) {
                 log.debug("Client {} underlying channel not ready for write; rescheduling on intermediate queue", client.id());
                 putOnClientQueue(payload);
             }
         }
+    }
+
+    public void acceptClient(ITcpNetworkClient networkClient, ByteBuffer readBuffer) {
+        networkClientRepository.addClient(networkClient);
+        networkClient.socketChannel().read(readBuffer, new ReadContext(networkClient, readBuffer), networkReadHandler);
+        serverSocketChannel.accept(readBuffer, networkAcceptHandler);
+        networkHooksDispatcher.enqueue(new ClientConnected<>(networkClient));
     }
 
     void putOnClientQueue(NetworkQueuePayload networkPayload) {
@@ -156,29 +174,4 @@ public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient
         clientQueue.offer(networkPayload);
     }
 
-    CompletionHandler<AsynchronousSocketChannel, ByteBuffer> networkAcceptHandler() {
-        return new CompletionHandler<>() {
-            @Override
-            public void completed(AsynchronousSocketChannel socketChannel, ByteBuffer readBuffer) {
-                final var networkClient = new TcpNetworkClient(
-                        IdUtils.fastClientId(),
-                        ClientNetworkDetails.from(socketChannel),
-                        LocalDateTime.now(),
-                        new ConcurrentHashMap<>(),
-                        socketChannel
-                );
-
-                log.debug("Registering new client with ID {}", networkClient.id());
-                networkClientRepository.addClient(networkClient);
-                socketChannel.read(readBuffer, networkClient, networkReadHandler(readBuffer));
-                serverSocketChannel.accept(readBuffer, this);
-                networkHooksDispatcher.enqueue(new ClientConnected<>(networkClient));
-            }
-
-            @Override
-            public void failed(Throwable throwable, ByteBuffer readBuffer) {
-                log.error(throwable.getMessage(), throwable);
-            }
-        };
-    }
 }

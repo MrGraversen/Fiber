@@ -4,7 +4,7 @@ import io.graversen.fiber.core.IServer;
 import io.graversen.fiber.core.NetworkMessage;
 import io.graversen.fiber.core.hooks.*;
 import io.graversen.fiber.utils.ChannelUtils;
-import io.graversen.fiber.utils.ControllableTaskLoop;
+import io.graversen.fiber.utils.Checks;
 import io.graversen.fiber.utils.IdUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,10 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 @Slf4j
-public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
+public abstract class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final ServerNetworkConfiguration networkConfiguration;
@@ -40,15 +39,19 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     public AsynchronousTcpServer(
             ServerNetworkConfiguration networkConfiguration,
             ServerInternalsConfiguration internalsConfiguration,
-            ITcpNetworkClientRepository networkClientRepository
+            ITcpNetworkClientRepository networkClientRepository,
+            NetworkQueue networkOutQueue,
+            ClientQueues clientQueues,
+            NetworkWriteTask networkWriteTask,
+            ExecutorService internalTaskExecutor
     ) {
-        this.networkConfiguration = Objects.requireNonNull(networkConfiguration, "Parameter 'networkConfiguration' must not be null");
-        this.internalsConfiguration = Objects.requireNonNull(internalsConfiguration, "Parameter 'internalsConfiguration' must not be null");
-        this.networkClientRepository = Objects.requireNonNull(networkClientRepository, "Parameter 'eventClass' must not be null");
-        this.networkOutQueue = new NetworkQueue();
-        this.clientQueues = new ClientQueues();
-        this.networkWriteTask = new NetworkWriteTask();
-        this.internalTaskExecutor = Executors.newCachedThreadPool();
+        this.networkConfiguration = Checks.nonNull(networkConfiguration, "networkConfiguration");
+        this.internalsConfiguration = Checks.nonNull(internalsConfiguration, "internalsConfiguration");
+        this.networkClientRepository = Checks.nonNull(networkClientRepository, "networkClientRepository");
+        this.networkOutQueue = Checks.nonNull(networkOutQueue, "networkOutQueue");
+        this.clientQueues = Checks.nonNull(clientQueues, "clientQueues");
+        this.networkWriteTask = Checks.nonNull(networkWriteTask, "networkWriteTask");
+        this.internalTaskExecutor = Checks.nonNull(internalTaskExecutor, "internalTaskExecutor");
         log.debug("Initialized {} instance", getClass().getSimpleName());
     }
 
@@ -61,12 +64,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
 
             try {
                 final var start = LocalDateTime.now();
-
-                try {
-                    this.channelGroup = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool());
-                } catch (IOException e) {
-                    throw new UnableToConfigureServerException(e);
-                }
+                this.channelGroup = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool());
 
                 internalTaskExecutor.execute(networkWriteTask);
                 serverSocketChannel = AsynchronousServerSocketChannel
@@ -137,30 +135,25 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
         }
     }
 
-    Consumer<ITcpNetworkClient> doSend(NetworkQueuePayload networkPayload) {
-        return networkClient -> {
-            final var socketChannel = networkClient.socketChannel();
-            if (socketChannel.isOpen()) {
-                try {
-                    networkClient.pending().set(true);
-                    final var byteBuffer = networkPayload.getByteBuffer();
-                    socketChannel.write(byteBuffer, networkClient, networkWriteHandler(byteBuffer));
-                } catch (WritePendingException wpe) {
-                    log.debug("Client {} nderlying channel not ready for write; rescheduling on intermediate queue", networkClient.id());
-                    putOnClientQueue(networkPayload);
-                }
+    public void doSend(NetworkQueuePayload payload) {
+        final var client = payload.getClient();
+        final var socketChannel = client.socketChannel();
+        if (socketChannel.isOpen()) {
+            try {
+                client.pending().set(true);
+                final var byteBuffer = payload.getByteBuffer();
+                socketChannel.write(byteBuffer, client, networkWriteHandler(byteBuffer));
+            } catch (WritePendingException wpe) {
+                log.debug("Client {} underlying channel not ready for write; rescheduling on intermediate queue", client.id());
+                putOnClientQueue(payload);
             }
-        };
+        }
     }
 
     void putOnClientQueue(NetworkQueuePayload networkPayload) {
         networkPayload.registerRequeue();
         final var clientQueue = clientQueues.getClientQueue(networkPayload.getClient());
         clientQueue.offer(networkPayload);
-    }
-
-    Runnable handleClientUnavailable() {
-        return () -> log.debug("Discarding message because client is not available");
     }
 
     CompletionHandler<AsynchronousSocketChannel, ByteBuffer> networkAcceptHandler() {
@@ -240,25 +233,5 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
                 disconnect(networkClient, throwable);
             }
         };
-    }
-
-    class NetworkWriteTask extends ControllableTaskLoop<NetworkQueuePayload> {
-        @Override
-        public void performTask(NetworkQueuePayload nextItem) {
-            try {
-                networkClientRepository.getClient(nextItem.getClient()).ifPresentOrElse(
-                        doSend(nextItem),
-                        handleClientUnavailable()
-                );
-            } catch (Exception e) {
-                log.error("Client {} unexpected error: {}", nextItem.getClient().id(), e.getMessage());
-                disconnect(nextItem.getClient(), e);
-            }
-        }
-
-        @Override
-        public NetworkQueuePayload awaitNext() throws InterruptedException {
-            return networkOutQueue.take();
-        }
     }
 }

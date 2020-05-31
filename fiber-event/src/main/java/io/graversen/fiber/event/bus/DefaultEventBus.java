@@ -98,7 +98,10 @@ public class DefaultEventBus implements IEventBus {
 
     private void hintNextEventPropagator() {
         int propagator = eventPropagatorRoundRobin.incrementAndGet();
-        if (propagator > cachedThreadPoolSize) propagator = 1;
+        if (propagator > cachedThreadPoolSize) {
+            propagator = 1;
+            eventPropagatorRoundRobin.getAndSet(1);
+        }
 
         final EventPropagator nextEventPropagator = eventPropagatorStore.get(propagator);
         synchronized (nextEventPropagator.LOCK) {

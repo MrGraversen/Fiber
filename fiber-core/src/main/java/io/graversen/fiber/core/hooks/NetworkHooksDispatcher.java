@@ -2,12 +2,14 @@ package io.graversen.fiber.core.hooks;
 
 import io.graversen.fiber.utils.ControllableTaskLoop;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 
+@Slf4j
 @RequiredArgsConstructor
 public class NetworkHooksDispatcher extends ControllableTaskLoop<EnqueuedNetworkHook<?>> {
     private final BlockingQueue<EnqueuedNetworkHook<?>> networkHookQueue = new LinkedBlockingQueue<>();
@@ -17,6 +19,30 @@ public class NetworkHooksDispatcher extends ControllableTaskLoop<EnqueuedNetwork
         final var networkHookConsumer = this.<T>dispatchStrategies().getOrDefault(networkHook.getClass(), failureStrategy());
         final var enqueuedNetworkHook = new EnqueuedNetworkHook<>(networkHook, networkHookConsumer);
         networkHookQueue.offer(enqueuedNetworkHook);
+    }
+
+    public void enqueue(NetworkRead<?> networkRead) {
+        networkHookQueue.offer(
+                new EnqueuedNetworkHook<>(networkRead, hook -> networkHooks.onNetworkRead((NetworkRead) hook))
+        );
+    }
+
+    public void enqueue(NetworkWrite<?> networkWrite) {
+        networkHookQueue.offer(
+                new EnqueuedNetworkHook<>(networkWrite, hook -> networkHooks.onNetworkWrite((NetworkWrite) hook))
+        );
+    }
+
+    public void enqueue(ClientConnected<?> clientConnected) {
+        networkHookQueue.offer(
+                new EnqueuedNetworkHook<>(clientConnected, hook -> networkHooks.onClientConnected((ClientConnected) hook))
+        );
+    }
+
+    public void enqueue(ClientDisconnected<?> clientDisconnected) {
+        networkHookQueue.offer(
+                new EnqueuedNetworkHook<>(clientDisconnected, hook -> networkHooks.onClientDisconnected((ClientDisconnected) hook))
+        );
     }
 
     @Override
@@ -40,8 +66,6 @@ public class NetworkHooksDispatcher extends ControllableTaskLoop<EnqueuedNetwork
     }
 
     private <T extends BaseNetworkHook<?>> Consumer<T> failureStrategy() {
-        return enqueuedNetworkHook -> {
-            throw new IllegalArgumentException("Could not enqueue network hook");
-        };
+        return enqueuedNetworkHook -> log.error("Could not enqueue network hook: {}", enqueuedNetworkHook);
     }
 }

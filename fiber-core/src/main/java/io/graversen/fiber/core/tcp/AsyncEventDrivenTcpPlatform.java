@@ -2,11 +2,13 @@ package io.graversen.fiber.core.tcp;
 
 import io.graversen.fiber.core.IPlatform;
 import io.graversen.fiber.core.IServer;
+import io.graversen.fiber.core.NoOpServer;
 import io.graversen.fiber.core.hooks.INetworkHooks;
 import io.graversen.fiber.core.hooks.NetworkHooksDispatcher;
 import io.graversen.fiber.event.bus.IEventBus;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -30,7 +32,7 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
     public void start(ServerNetworkConfiguration networkConfiguration) {
         final var networkHooksDispatcher = new NetworkHooksDispatcher(networkHooks);
         server = new AsynchronousTcpServer(
-                networkConfiguration,
+                new AsyncTcpNetworkEngine(networkConfiguration),
                 new ServerInternalsConfiguration(NETWORK_BUFFER_SIZE),
                 networkClientRepository,
                 networkQueue,
@@ -53,7 +55,7 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
 
     @Override
     public IServer<ITcpNetworkClient> server() {
-        return server;
+        return Objects.requireNonNullElseGet(server, NoOpServer<ITcpNetworkClient>::new);
     }
 
     private Consumer<NetworkQueuePayload> dispatchNetworkPayload() {

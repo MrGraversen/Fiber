@@ -5,28 +5,24 @@ import io.graversen.fiber.core.hooks.ClientConnected;
 import io.graversen.fiber.core.hooks.ClientDisconnected;
 import io.graversen.fiber.core.hooks.INetworkHooks;
 import io.graversen.fiber.core.hooks.NetworkHooksDispatcher;
-import io.graversen.fiber.utils.ChannelUtils;
 import io.graversen.fiber.utils.Checks;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.WritePendingException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopping = new AtomicBoolean(false);
-    private final ServerNetworkConfiguration networkConfiguration;
+    private final ITcpNetworkEngine tcpNetworkEngine;
     private final ServerInternalsConfiguration internalsConfiguration;
     private final ITcpNetworkClientRepository networkClientRepository;
     private final NetworkQueue networkOutQueue;
@@ -37,12 +33,10 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     private final NetworkReadHandler networkReadHandler;
     private final NetworkWriteHandler networkWriteHandler;
 
-    private AsynchronousChannelGroup channelGroup;
-    private AsynchronousServerSocketChannel serverSocketChannel;
     private NetworkHooksDispatcher networkHooksDispatcher;
 
     public AsynchronousTcpServer(
-            ServerNetworkConfiguration networkConfiguration,
+            ITcpNetworkEngine tcpNetworkEngine,
             ServerInternalsConfiguration internalsConfiguration,
             ITcpNetworkClientRepository networkClientRepository,
             NetworkQueue networkQueue,
@@ -53,7 +47,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
             NetworkReadHandler networkReadHandler,
             NetworkWriteHandler networkWriteHandler
     ) {
-        this.networkConfiguration = Checks.nonNull(networkConfiguration, "networkConfiguration");
+        this.tcpNetworkEngine = Checks.nonNull(tcpNetworkEngine, "tcpNetworkEngine");
         this.internalsConfiguration = Checks.nonNull(internalsConfiguration, "internalsConfiguration");
         this.networkClientRepository = Checks.nonNull(networkClientRepository, "networkClientRepository");
         this.networkOutQueue = Checks.nonNull(networkQueue, "networkQueue");
@@ -75,19 +69,14 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
 
             try {
                 final var start = LocalDateTime.now();
-                this.channelGroup = AsynchronousChannelGroup.withThreadPool(Executors.newCachedThreadPool());
 
+                tcpNetworkEngine.start(networkAcceptHandler);
                 internalTaskExecutor.execute(networkWriteTask);
-                serverSocketChannel = AsynchronousServerSocketChannel
-                        .open(channelGroup)
-                        .bind(networkConfiguration.getServerAddress());
-
-                serverSocketChannel.accept(null, networkAcceptHandler);
 
                 log.debug(
                         "Started server instance {} on port {} after {} ms",
                         getClass().getSimpleName(),
-                        networkConfiguration.getBindPort(),
+                        tcpNetworkEngine.getBindPort(),
                         Duration.between(start, LocalDateTime.now()).toMillis()
                 );
             } catch (IOException e) {
@@ -103,9 +92,8 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
         if (stopping.compareAndSet(false, true)) {
             log.debug("Stopping server with reason: {}", reason.getMessage());
             networkClientRepository.getClients().forEach(networkClient -> disconnect(networkClient, reason));
-            channelGroup.shutdown();
+            tcpNetworkEngine.stop();
             internalTaskExecutor.shutdown();
-            ChannelUtils.close(serverSocketChannel);
         } else {
             log.warn("Server instance {} already stopping!", getClass().getSimpleName());
         }
@@ -165,7 +153,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
         final var readBuffer = ByteBuffer.allocate(internalsConfiguration.getBufferSizeBytes());
         networkClientRepository.addClient(networkClient);
         networkClient.socketChannel().read(readBuffer, new ReadContext(networkClient, readBuffer), networkReadHandler);
-        serverSocketChannel.accept(null, networkAcceptHandler);
+        tcpNetworkEngine.getServerSocketChannel().accept(null, networkAcceptHandler);
         networkHooksDispatcher.enqueue(new ClientConnected<>(networkClient));
     }
 

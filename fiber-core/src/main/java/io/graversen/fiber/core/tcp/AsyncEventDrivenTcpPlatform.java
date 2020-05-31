@@ -6,6 +6,7 @@ import io.graversen.fiber.core.NoOpServer;
 import io.graversen.fiber.core.hooks.INetworkHooks;
 import io.graversen.fiber.core.hooks.NetworkHooksDispatcher;
 import io.graversen.fiber.event.bus.IEventBus;
+import io.graversen.fiber.utils.Checks;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
@@ -20,9 +21,11 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
     private final ITcpNetworkClientRepository networkClientRepository;
     private final NetworkQueue networkQueue;
     private final ClientQueues clientQueues;
+    private final IEventBus eventBus;
     private AsynchronousTcpServer server;
 
     public AsyncEventDrivenTcpPlatform(IEventBus eventBus) {
+        this.eventBus = Checks.nonNull(eventBus, "eventBus");
         this.networkHooks = new EventDrivenNetworkHooks(eventBus);
         this.networkClientRepository = new DefaultTcpClientRepository();
         this.networkQueue = new NetworkQueue();
@@ -30,8 +33,9 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
     }
 
     public void start(ServerNetworkConfiguration networkConfiguration) {
-        final var networkHooksDispatcher = new NetworkHooksDispatcher(networkHooks);
+        eventBus.start();
 
+        final var networkHooksDispatcher = new NetworkHooksDispatcher(networkHooks);
         server = new AsynchronousTcpServer(
                 new AsyncTcpNetworkEngine(networkConfiguration),
                 new ServerInternalsConfiguration(NETWORK_BUFFER_SIZE),
@@ -45,8 +49,8 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
                 new NetworkWriteHandler(networkHooksDispatcher, clientQueues, networkQueue, dispatchHandlerFailure()),
                 networkHooksDispatcher
         );
-
         server.start(networkHooks);
+
         log.info("Successfully started {}!", getClass().getSimpleName());
     }
 

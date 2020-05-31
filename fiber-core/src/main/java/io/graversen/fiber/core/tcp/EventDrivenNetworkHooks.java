@@ -1,33 +1,42 @@
 package io.graversen.fiber.core.tcp;
 
 import io.graversen.fiber.core.hooks.*;
+import io.graversen.fiber.core.tcp.events.ClientConnectedEvent;
+import io.graversen.fiber.core.tcp.events.NetworkReadEvent;
+import io.graversen.fiber.core.tcp.events.NetworkWriteEvent;
 import io.graversen.fiber.event.bus.IEventBus;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import io.graversen.fiber.utils.Checks;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 public class EventDrivenNetworkHooks implements INetworkHooks<ITcpNetworkClient> {
-    private final @NonNull IEventBus eventBus;
+    private final IEventBus eventBus;
+
+    public EventDrivenNetworkHooks(IEventBus eventBus) {
+        this.eventBus = Checks.nonNull(eventBus, "eventBus");
+    }
 
     @Override
     public void onNetworkRead(NetworkRead<ITcpNetworkClient> networkRead) {
-        log.info("Read {} bytes: {}", networkRead.getNetworkMessage().getBytes(), networkRead.getNetworkMessage().toString());
+        final var event = new NetworkReadEvent(networkRead.getClient(), networkRead.getNetworkMessage());
+        eventBus.emitEvent(event);
     }
 
     @Override
     public void onNetworkWrite(NetworkWrite<ITcpNetworkClient> networkWrite) {
-
+        final var event = new NetworkWriteEvent(networkWrite.getClient(), networkWrite.getNetworkMessage());
+        eventBus.emitEvent(event);
     }
 
     @Override
     public void onClientConnected(ClientConnected<ITcpNetworkClient> clientConnected) {
-        log.info("onClientConnected");
+        final var event = new ClientConnectedEvent(clientConnected.getClient());
+        eventBus.emitEvent(event);
     }
 
     @Override
     public void onClientDisconnected(ClientDisconnected<ITcpNetworkClient> clientDisconnected) {
-        log.info("onClientDisconnected");
+        final var event = new ClientConnectedEvent(clientDisconnected.getClient());
+        eventBus.emitEvent(event);
     }
 }

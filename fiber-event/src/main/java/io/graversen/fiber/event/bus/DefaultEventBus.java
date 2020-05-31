@@ -5,6 +5,8 @@ import io.graversen.fiber.event.IEventListener;
 import io.graversen.fiber.utils.FiberEnvironment;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,14 +81,18 @@ public class DefaultEventBus implements IEventBus {
 
     @Override
     public void emitEvent(IEvent event) {
-        if (eventQueueStore.containsKey(event.getClass())) {
-            final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.get(event.getClass());
-            eventQueue.add(event);
+        if (active.get()) {
+            if (eventQueueStore.containsKey(event.getClass())) {
+                final ConcurrentLinkedQueue<IEvent> eventQueue = eventQueueStore.get(event.getClass());
+                eventQueue.add(event);
 
-            eventQueueStore.put(event.getClass(), eventQueue);
-            hintNextEventPropagator();
+                eventQueueStore.put(event.getClass(), eventQueue);
+                hintNextEventPropagator();
+            } else {
+                log.warn("Event listener not registered for event: {}", event.getClass());
+            }
         } else {
-            log.warn("Event listener not registered for event: {}", event.getClass());
+            log.warn("{} instance has not yet been started", getClass().getSimpleName());
         }
     }
 
@@ -103,6 +109,8 @@ public class DefaultEventBus implements IEventBus {
     @Override
     public void start() {
         if (active.compareAndSet(false, true)) {
+            final var start = LocalDateTime.now();
+
             if (threadPoolExecutor != null) {
                 threadPoolExecutor.shutdownNow();
                 threadPoolExecutor = null;
@@ -117,7 +125,11 @@ public class DefaultEventBus implements IEventBus {
                 threadPoolExecutor.execute(eventPropagator);
             });
 
-            log.debug("Started {} instance", getClass().getSimpleName());
+            log.debug(
+                    "Started {} instance after {} ms",
+                    getClass().getSimpleName(),
+                    Duration.between(start, LocalDateTime.now()).toMillis()
+            );
         }
     }
 

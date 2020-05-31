@@ -2,6 +2,7 @@ package io.graversen.fiber.core.tcp;
 
 import io.graversen.fiber.utils.IClient;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -15,9 +16,9 @@ public interface ITcpNetworkClientRepository {
 
     Optional<ITcpNetworkClient> removeClient(IClient client);
 
-    Set<ITcpNetworkClient> getClients();
+    Collection<? extends ITcpNetworkClient> getClients();
 
-    Set<ITcpNetworkClient> getClients(Predicate<ITcpNetworkClient> query);
+    Collection<? extends ITcpNetworkClient> getClients(Predicate<ITcpNetworkClient> query);
 
-    Set<ITcpNetworkClient> removeClients(Predicate<ITcpNetworkClient> query);
+    Collection<? extends ITcpNetworkClient> removeClients(Predicate<ITcpNetworkClient> query);
 }

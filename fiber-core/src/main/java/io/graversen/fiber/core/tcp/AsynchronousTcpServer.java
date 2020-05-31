@@ -45,7 +45,8 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
             NetworkAcceptHandler networkAcceptHandler,
             NetworkReadHandler networkReadHandler,
             NetworkWriteHandler networkWriteHandler,
-            NetworkHooksDispatcher networkHooksDispatcher) {
+            NetworkHooksDispatcher networkHooksDispatcher
+    ) {
         this.tcpNetworkEngine = Checks.nonNull(tcpNetworkEngine, "tcpNetworkEngine");
         this.internalsConfiguration = Checks.nonNull(internalsConfiguration, "internalsConfiguration");
         this.networkClientRepository = Checks.nonNull(networkClientRepository, "networkClientRepository");
@@ -115,7 +116,9 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
 
     @Override
     public void broadcast(byte[] message) {
-        networkClientRepository.getClients().forEach(networkClient -> send(networkClient, message));
+        for (final ITcpNetworkClient networkClient : networkClientRepository.getClients()) {
+            send(networkClient, message);
+        }
     }
 
     @Override
@@ -142,7 +145,6 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
                 final var byteBuffer = payload.getByteBuffer();
                 socketChannel.write(byteBuffer, payload, networkWriteHandler);
             } catch (WritePendingException wpe) {
-                log.debug("Client {} underlying channel not ready for write; rescheduling on intermediate queue", client.id());
                 putOnClientQueue(payload);
             }
         }

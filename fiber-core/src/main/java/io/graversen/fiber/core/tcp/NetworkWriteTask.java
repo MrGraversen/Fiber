@@ -17,10 +17,9 @@ public class NetworkWriteTask extends ControllableTaskLoop<NetworkQueuePayload> 
     @Override
     public void performTask(NetworkQueuePayload nextItem) {
         try {
-            networkClientRepository.getClient(nextItem.getClient()).ifPresentOrElse(
-                    client -> sendCallback.accept(nextItem),
-                    handleClientUnavailable()
-            );
+            networkClientRepository
+                    .getClient(nextItem.getClient())
+                    .ifPresent(client -> sendCallback.accept(nextItem));
         } catch (Exception e) {
             log.error("Client {} unexpected error: {}", nextItem.getClient().id(), e.getMessage());
         }
@@ -29,9 +28,5 @@ public class NetworkWriteTask extends ControllableTaskLoop<NetworkQueuePayload> 
     @Override
     public NetworkQueuePayload awaitNext() throws InterruptedException {
         return networkQueue.take();
-    }
-
-    private Runnable handleClientUnavailable() {
-        return () -> log.debug("Discarding message because client is not available");
     }
 }

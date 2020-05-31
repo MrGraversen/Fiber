@@ -2,8 +2,8 @@ package io.graversen.fiber.core.tcp;
 
 import io.graversen.fiber.utils.IClient;
 
+import java.util.Collection;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Predicate;
@@ -33,17 +33,17 @@ public class DefaultTcpClientRepository implements ITcpNetworkClientRepository {
     }
 
     @Override
-    public Set<ITcpNetworkClient> getClients() {
-        return Set.copyOf(tcpNetworkClients.values());
+    public Collection<? extends ITcpNetworkClient> getClients() {
+        return tcpNetworkClients.values();
     }
 
     @Override
-    public Set<ITcpNetworkClient> getClients(Predicate<ITcpNetworkClient> query) {
+    public Collection<? extends ITcpNetworkClient> getClients(Predicate<ITcpNetworkClient> query) {
         return null;
     }
 
     @Override
-    public Set<ITcpNetworkClient> removeClients(Predicate<ITcpNetworkClient> query) {
+    public Collection<? extends ITcpNetworkClient> removeClients(Predicate<ITcpNetworkClient> query) {
         return null;
     }
 }

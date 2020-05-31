@@ -32,8 +32,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     private final NetworkAcceptHandler networkAcceptHandler;
     private final NetworkReadHandler networkReadHandler;
     private final NetworkWriteHandler networkWriteHandler;
-
-    private NetworkHooksDispatcher networkHooksDispatcher;
+    private final NetworkHooksDispatcher networkHooksDispatcher;
 
     public AsynchronousTcpServer(
             ITcpNetworkEngine tcpNetworkEngine,
@@ -45,8 +44,8 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
             ExecutorService internalTaskExecutor,
             NetworkAcceptHandler networkAcceptHandler,
             NetworkReadHandler networkReadHandler,
-            NetworkWriteHandler networkWriteHandler
-    ) {
+            NetworkWriteHandler networkWriteHandler,
+            NetworkHooksDispatcher networkHooksDispatcher) {
         this.tcpNetworkEngine = Checks.nonNull(tcpNetworkEngine, "tcpNetworkEngine");
         this.internalsConfiguration = Checks.nonNull(internalsConfiguration, "internalsConfiguration");
         this.networkClientRepository = Checks.nonNull(networkClientRepository, "networkClientRepository");
@@ -57,6 +56,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
         this.networkAcceptHandler = Checks.nonNull(networkAcceptHandler, "networkAcceptHandler");
         this.networkReadHandler = Checks.nonNull(networkReadHandler, "networkReadHandler");
         this.networkWriteHandler = Checks.nonNull(networkWriteHandler, "networkWriteHandler");
+        this.networkHooksDispatcher = Checks.nonNull(networkHooksDispatcher, "networkHooksDispatcher");
         log.debug("Initialized {} instance", getClass().getSimpleName());
     }
 
@@ -64,13 +64,12 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     public void start(INetworkHooks<ITcpNetworkClient> networkHooks) {
         if (started.compareAndSet(false, true)) {
             Objects.requireNonNull(networkHooks, "Parameter 'networkHooks' must not be null");
-            this.networkHooksDispatcher = new NetworkHooksDispatcher(networkHooks);
-            internalTaskExecutor.execute(networkHooksDispatcher);
 
             try {
                 final var start = LocalDateTime.now();
 
                 tcpNetworkEngine.start(networkAcceptHandler);
+                internalTaskExecutor.execute(networkHooksDispatcher);
                 internalTaskExecutor.execute(networkWriteTask);
 
                 log.debug(

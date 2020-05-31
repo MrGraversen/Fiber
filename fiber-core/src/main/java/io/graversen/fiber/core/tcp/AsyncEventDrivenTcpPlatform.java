@@ -31,6 +31,7 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
 
     public void start(ServerNetworkConfiguration networkConfiguration) {
         final var networkHooksDispatcher = new NetworkHooksDispatcher(networkHooks);
+
         server = new AsynchronousTcpServer(
                 new AsyncTcpNetworkEngine(networkConfiguration),
                 new ServerInternalsConfiguration(NETWORK_BUFFER_SIZE),
@@ -41,7 +42,8 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
                 Executors.newCachedThreadPool(),
                 new NetworkAcceptHandler(dispatchNetworkClientAccept()),
                 new NetworkReadHandler(networkHooksDispatcher, dispatchHandlerFailure()),
-                new NetworkWriteHandler(networkHooksDispatcher, clientQueues, networkQueue, dispatchHandlerFailure())
+                new NetworkWriteHandler(networkHooksDispatcher, clientQueues, networkQueue, dispatchHandlerFailure()),
+                networkHooksDispatcher
         );
 
         server.start(networkHooks);

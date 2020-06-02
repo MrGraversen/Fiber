@@ -3,6 +3,7 @@ package io.graversen.fiber.core.tcp;
 import io.graversen.fiber.core.IPlatform;
 import io.graversen.fiber.core.IServer;
 import io.graversen.fiber.core.NoOpServer;
+import io.graversen.fiber.core.codec.*;
 import io.graversen.fiber.core.hooks.INetworkHooks;
 import io.graversen.fiber.core.hooks.NetworkHooksDispatcher;
 import io.graversen.fiber.core.tcp.events.*;
@@ -66,6 +67,30 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
     @Override
     public IServer<ITcpNetworkClient> server() {
         return Objects.requireNonNullElseGet(server, NoOpServer<ITcpNetworkClient>::new);
+    }
+
+    @Override
+    public <T> void registerDecoder(IDecoder<T> codec, IReceiver<T> receiver) {
+        eventBus.registerEventListener(NetworkReadEvent.class, decodeNetworkMessage(codec, receiver));
+    }
+
+    @Override
+    public <T> EncodeContext<T> registerEncoder(IEncoder<T> encoder) {
+        return encodeNetworkMessage(encoder);
+    }
+
+    private <T> IEventListener<NetworkReadEvent> decodeNetworkMessage(IDecoder<T> codec, IReceiver<T> receiver) {
+        return (NetworkReadEvent event) -> {
+            final var decoder = new DecodeContext<>(codec, receiver);
+            decoder.decode(event);
+        };
+    }
+
+    private <T> EncodeContext<T> encodeNetworkMessage(IEncoder<T> encoder) {
+        return (value, networkClient) -> {
+            final var encodedValue = encoder.encode(value);
+            server().send(networkClient, encodedValue);
+        };
     }
 
     private Consumer<NetworkQueuePayload> dispatchNetworkPayload() {

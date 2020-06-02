@@ -1,5 +1,9 @@
 package io.graversen.fiber.core;
 
+import io.graversen.fiber.core.codec.EncodeContext;
+import io.graversen.fiber.core.codec.IDecoder;
+import io.graversen.fiber.core.codec.IEncoder;
+import io.graversen.fiber.core.codec.IReceiver;
 import io.graversen.fiber.core.tcp.ServerNetworkConfiguration;
 import io.graversen.fiber.utils.IClient;
 
@@ -9,4 +13,8 @@ public interface IPlatform<C extends IClient> {
     void stop();
 
     IServer<C> server();
+
+    <T> void registerDecoder(IDecoder<T> codec, IReceiver<T> receiver);
+
+    <T> EncodeContext<T> registerEncoder(IEncoder<T> encoder);
 }

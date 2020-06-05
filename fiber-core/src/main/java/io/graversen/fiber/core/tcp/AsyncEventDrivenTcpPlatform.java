@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 @Slf4j
 public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient> {
@@ -76,20 +77,19 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
 
     @Override
     public <T> EncodeContext<T> registerEncoder(IEncoder<T> encoder) {
-        return encodeNetworkMessage(encoder);
+        return new EncodeContext<>(encoder, (encodedValue, networkClient) -> server().send(networkClient, encodedValue));
+    }
+
+    @Override
+    public ClientsContext getClients(Predicate<ITcpNetworkClient> query) {
+        final var clients = networkClientRepository.getClients(query);
+        return new ClientsContext(server(), clients);
     }
 
     private <T> IEventListener<NetworkReadEvent> decodeNetworkMessage(IDecoder<T> codec, IReceiver<T> receiver) {
         return (NetworkReadEvent event) -> {
             final var decoder = new DecodeContext<>(codec, receiver);
             decoder.decode(event);
-        };
-    }
-
-    private <T> EncodeContext<T> encodeNetworkMessage(IEncoder<T> encoder) {
-        return (value, networkClient) -> {
-            final var encodedValue = encoder.encode(value);
-            server().send(networkClient, encodedValue);
         };
     }
 
@@ -115,26 +115,32 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
     }
 
     private IEventListener<ClientConnectedEvent> defaultClientConnectedListener() {
-        return event -> {};
+        return event -> {
+        };
     }
 
     private IEventListener<ClientDisconnectedEvent> defaultClientDisconnectedListener() {
-        return event -> {};
+        return event -> {
+        };
     }
 
     private IEventListener<ServerStartedEvent> defaultServerStartedListener() {
-        return event -> {};
+        return event -> {
+        };
     }
 
     private IEventListener<ServerStoppedEvent> defaultServerStoppedListener() {
-        return event -> {};
+        return event -> {
+        };
     }
 
     private IEventListener<NetworkReadEvent> defaultNetworkReadListener() {
-        return event -> {};
+        return event -> {
+        };
     }
 
     private IEventListener<NetworkWriteEvent> defaultNetworkWriteListener() {
-        return event -> {};
+        return event -> {
+        };
     }
 }

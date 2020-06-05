@@ -103,7 +103,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
     public void disconnect(ITcpNetworkClient client, Throwable reason) {
         try {
             networkClientRepository.getClient(client).ifPresent(networkClient -> {
-                log.debug("Client {} disconnected: {}", client.id(), reason.getMessage());
+                log.debug("Client {} disconnected: {}", client.id(), Objects.requireNonNullElseGet(reason, IOException::new).getMessage());
                 networkClient.close();
                 clientQueues.remove(client);
                 networkClientRepository.removeClient(networkClient);

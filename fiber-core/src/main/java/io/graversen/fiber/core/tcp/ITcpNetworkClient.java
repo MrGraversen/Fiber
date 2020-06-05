@@ -21,7 +21,7 @@ public interface ITcpNetworkClient extends IClient {
 
     AsynchronousSocketChannel socketChannel();
 
-    AtomicBoolean pending();
+    AtomicBoolean writePending();
 
     void close();
 }

@@ -57,7 +57,7 @@ public class TcpNetworkClient implements ITcpNetworkClient {
     }
 
     @Override
-    public AtomicBoolean pending() {
+    public AtomicBoolean writePending() {
         return pending;
     }
 

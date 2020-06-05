@@ -22,7 +22,7 @@ public class NetworkWriteHandler implements CompletionHandler<Integer, NetworkQu
     public void completed(Integer result, NetworkQueuePayload networkQueuePayload) {
         final var message = networkQueuePayload.getByteBuffer();
         final var client = networkQueuePayload.getClient();
-        client.pending().set(false);
+        client.writePending().set(false);
 
         if (result == -1) {
             failureCallback.accept(client, new IOException("Disconnect from client endpoint"));

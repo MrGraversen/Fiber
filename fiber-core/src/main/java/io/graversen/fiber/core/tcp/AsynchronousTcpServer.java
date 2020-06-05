@@ -141,7 +141,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
         final var socketChannel = client.socketChannel();
         if (socketChannel.isOpen()) {
             try {
-                client.pending().set(true);
+                client.writePending().set(true);
                 final var byteBuffer = payload.getByteBuffer();
                 socketChannel.write(byteBuffer, payload, networkWriteHandler);
             } catch (WritePendingException wpe) {

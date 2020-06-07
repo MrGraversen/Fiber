@@ -49,8 +49,32 @@ In practice, you (and I) should use a well-established approach and technology t
 
 ## Design and Concepts
 
-`// TODO`
+_Fiber_ builts on the general principle of asynchronous I/O, in that all network endpoints (clients) share the same resources.
+
+The concepts of AIO introduces a number of constraints, the most central being that I/O should be as lean as possible, causing (ideally) zero side effects.  
+Network reads and writes share a resource group, and any other operations are deferred to the event bus, where (by default) a thread count equal to the host's CPUs are present.
+The outcomes of event listeners processing will therefore not have any effect on the I/O layer.  
+
+Users of _Fiber_ are always able to request network writes without it blocking. The operation will simply be deferred until the I/O loop is available, or the client is available, whichever comes first.  
+
+_Fiber_ employs what I like to call an "optimistic write" pattern: The client endpoint is always _assumed to be_ ready to receive data. If that is not the case, the operation is bounced
+to a client-specific queue. Once that particular client has finished writing, the operation will be put back to the general network write operation queue.  
+This approach ensures that any platform-specific limitations to enqueued network buffers will be handled gracefully, for example under Windows.
+
+![](assets/high-level-diagram.png)
+
+The general usage of _Fiber_ will involve three major concepts:
+* **TCP Server**  
+The central network engine of _Fiber_ and encapsulation of `java.nio` AIO concepts.
+* **Event Bus**  
+General purpose event bus to hand-off operations for long-running tasks.
+* **Platform**  
+An abstraction to allow both the TCP server and event bus to deal with their own concerns. Network hooks from the TCP server are transformed to events.
+
+The user is free to specify their own implementations of most constructs of each concept, if special requirements arise.
+
+![](assets/event-driven-platform.png)
 
 ## Examples
 
-`// TODO`
+See `fiber-examples` project.

@@ -62,5 +62,6 @@
         <module>fiber-core</module>
         <module>fiber-utils</module>
         <module>fiber-event</module>
+        <module>fiber-examples</module>
     </modules>
 </project>

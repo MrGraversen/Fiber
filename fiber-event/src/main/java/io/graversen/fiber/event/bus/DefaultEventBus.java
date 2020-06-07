@@ -89,7 +89,7 @@ public class DefaultEventBus implements IEventBus {
                 eventQueueStore.put(event.getClass(), eventQueue);
                 hintNextEventPropagator();
             } else {
-                log.warn("Event listener not registered for event: {}", event.getClass());
+                log.debug("Event listener not registered for event: {}", event.getClass());
             }
         } else {
             log.warn("{} instance has not yet been started", getClass().getSimpleName());

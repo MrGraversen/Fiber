@@ -34,8 +34,6 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
         this.networkClientRepository = new DefaultTcpClientRepository();
         this.networkQueue = new NetworkQueue();
         this.clientQueues = new ClientQueues();
-
-        bindDefaultEventHandlers();
     }
 
     public void start(ServerNetworkConfiguration networkConfiguration) {
@@ -103,44 +101,5 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
 
     private BiConsumer<ITcpNetworkClient, Throwable> dispatchHandlerFailure() {
         return (client, reason) -> server.disconnect(client, reason);
-    }
-
-    private void bindDefaultEventHandlers() {
-        eventBus.registerEventListener(ClientConnectedEvent.class, defaultClientConnectedListener());
-        eventBus.registerEventListener(ClientDisconnectedEvent.class, defaultClientDisconnectedListener());
-        eventBus.registerEventListener(ServerStartedEvent.class, defaultServerStartedListener());
-        eventBus.registerEventListener(ServerStoppedEvent.class, defaultServerStoppedListener());
-        eventBus.registerEventListener(NetworkReadEvent.class, defaultNetworkReadListener());
-        eventBus.registerEventListener(NetworkWriteEvent.class, defaultNetworkWriteListener());
-    }
-
-    private IEventListener<ClientConnectedEvent> defaultClientConnectedListener() {
-        return event -> {
-        };
-    }
-
-    private IEventListener<ClientDisconnectedEvent> defaultClientDisconnectedListener() {
-        return event -> {
-        };
-    }
-
-    private IEventListener<ServerStartedEvent> defaultServerStartedListener() {
-        return event -> {
-        };
-    }
-
-    private IEventListener<ServerStoppedEvent> defaultServerStoppedListener() {
-        return event -> {
-        };
-    }
-
-    private IEventListener<NetworkReadEvent> defaultNetworkReadListener() {
-        return event -> {
-        };
-    }
-
-    private IEventListener<NetworkWriteEvent> defaultNetworkWriteListener() {
-        return event -> {
-        };
     }
 }

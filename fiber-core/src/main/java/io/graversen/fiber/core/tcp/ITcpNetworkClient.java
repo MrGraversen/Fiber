@@ -17,6 +17,10 @@ public interface ITcpNetworkClient extends IClient {
 
     <T> void setAttribute(String key, T attribute);
 
+    <T> boolean hasAttribute(String key, T attribute);
+
+    void removeAttribute(String key);
+
     Map<String, Object> attributes();
 
     AsynchronousSocketChannel socketChannel();

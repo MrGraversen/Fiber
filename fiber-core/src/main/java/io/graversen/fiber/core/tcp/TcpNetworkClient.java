@@ -47,6 +47,18 @@ public class TcpNetworkClient implements ITcpNetworkClient {
     }
 
     @Override
+    public <T> boolean hasAttribute(String key, T attributeComparison) {
+        return getAttribute(key)
+                .map(attribute -> attribute.equals(attributeComparison))
+                .orElse(false);
+    }
+
+    @Override
+    public void removeAttribute(String key) {
+        attributes.remove(key);
+    }
+
+    @Override
     public Map<String, Object> attributes() {
         return Map.copyOf(attributes);
     }

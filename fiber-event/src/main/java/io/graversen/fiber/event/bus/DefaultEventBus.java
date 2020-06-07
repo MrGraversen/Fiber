@@ -172,9 +172,9 @@ public class DefaultEventBus implements IEventBus {
     public void stop(boolean gracefully) {
         if (active.compareAndSet(true, false)) {
             if (gracefully) {
-                threadPoolExecutor.shutdownNow();
-            } else {
                 threadPoolExecutor.shutdown();
+            } else {
+                threadPoolExecutor.shutdownNow();
             }
 
             eventPropagatorStore.forEach((i, eventPropagator) -> {
@@ -200,7 +200,7 @@ public class DefaultEventBus implements IEventBus {
         @Override
         public void run() {
             try {
-                while (!Thread.currentThread().isInterrupted()) {
+                while (!Thread.currentThread().isInterrupted() && active.get()) {
                     if (!pause.get()) {
                         for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet()) {
                             final var eventQueue = eventQueueStore.computeIfAbsent(eventClass, e -> new ConcurrentLinkedQueue<>());

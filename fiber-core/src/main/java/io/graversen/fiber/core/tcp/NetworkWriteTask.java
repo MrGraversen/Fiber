@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -27,6 +28,6 @@ public class NetworkWriteTask extends ControllableTaskLoop<NetworkQueuePayload> 
 
     @Override
     public NetworkQueuePayload awaitNext() throws InterruptedException {
-        return networkQueue.take();
+        return networkQueue.poll(1000, TimeUnit.MILLISECONDS);
     }
 }

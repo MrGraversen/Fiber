@@ -10,6 +10,7 @@ import io.graversen.fiber.core.tcp.events.*;
 import io.graversen.fiber.event.IEventListener;
 import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.utils.Checks;
+import io.graversen.fiber.utils.NamedThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
@@ -47,7 +48,7 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
                 networkQueue,
                 clientQueues,
                 new NetworkWriteTask(networkClientRepository, networkQueue, dispatchNetworkPayload()),
-                Executors.newCachedThreadPool(),
+                Executors.newCachedThreadPool(new NamedThreadFactory("Internal")),
                 new NetworkAcceptHandler(dispatchNetworkClientAccept()),
                 new NetworkReadHandler(networkHooksDispatcher, dispatchHandlerFailure()),
                 new NetworkWriteHandler(networkHooksDispatcher, clientQueues, networkQueue, dispatchHandlerFailure()),
@@ -60,12 +61,18 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
 
     @Override
     public void stop() {
-        throw new UnsupportedOperationException();
+        server().stop(new RuntimeException("Shutting down"));
+        eventBus().stop(true);
     }
 
     @Override
     public IServer<ITcpNetworkClient> server() {
         return Objects.requireNonNullElseGet(server, NoOpServer<ITcpNetworkClient>::new);
+    }
+
+    @Override
+    public IEventBus eventBus() {
+        return eventBus;
     }
 
     @Override

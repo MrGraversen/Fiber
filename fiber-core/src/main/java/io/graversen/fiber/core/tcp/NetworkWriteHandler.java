@@ -44,5 +44,4 @@ public class NetworkWriteHandler implements CompletionHandler<Integer, NetworkQu
         log.error("Client {} network write error: {}", networkQueuePayload.getClient().id(), throwable.getMessage());
         failureCallback.accept(networkQueuePayload.getClient(), throwable);
     }
-
 }

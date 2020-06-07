@@ -94,6 +94,8 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
             networkClientRepository.getClients().forEach(networkClient -> disconnect(networkClient, reason));
             tcpNetworkEngine.stop();
             internalTaskExecutor.shutdown();
+            networkWriteTask.stop();
+            networkHooksDispatcher.stop();
         } else {
             log.warn("Server instance {} already stopping!", getClass().getSimpleName());
         }

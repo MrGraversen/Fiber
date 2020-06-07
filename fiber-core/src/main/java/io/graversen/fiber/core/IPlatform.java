@@ -7,6 +7,7 @@ import io.graversen.fiber.core.codec.IReceiver;
 import io.graversen.fiber.core.tcp.ClientsContext;
 import io.graversen.fiber.core.tcp.ITcpNetworkClient;
 import io.graversen.fiber.core.tcp.ServerNetworkConfiguration;
+import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.utils.IClient;
 
 import java.util.function.Predicate;
@@ -17,6 +18,8 @@ public interface IPlatform<C extends IClient> {
     void stop();
 
     IServer<C> server();
+
+    IEventBus eventBus();
 
     <T> void registerDecoder(IDecoder<T> codec, IReceiver<T> receiver);
 

@@ -15,6 +15,10 @@ public class Tasks {
         executor.schedule(task, duration.toMillis(), TimeUnit.MILLISECONDS);
     }
 
+    public static void interval(Duration interval, Runnable task) {
+        executor.scheduleAtFixedRate(task, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
+    }
+
     public static void stop() {
         executor.shutdownNow();
     }

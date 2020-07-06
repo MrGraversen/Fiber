@@ -6,7 +6,7 @@ import io.graversen.fiber.core.NoOpServer;
 import io.graversen.fiber.core.codec.*;
 import io.graversen.fiber.core.hooks.INetworkHooks;
 import io.graversen.fiber.core.hooks.NetworkHooksDispatcher;
-import io.graversen.fiber.core.tcp.events.*;
+import io.graversen.fiber.core.tcp.events.NetworkReadEvent;
 import io.graversen.fiber.event.IEventListener;
 import io.graversen.fiber.event.bus.IEventBus;
 import io.graversen.fiber.utils.Checks;
@@ -21,7 +21,6 @@ import java.util.function.Predicate;
 
 @Slf4j
 public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient> {
-    private static final int NETWORK_BUFFER_SIZE = 32768;
     private final INetworkHooks<ITcpNetworkClient> networkHooks;
     private final ITcpNetworkClientRepository networkClientRepository;
     private final NetworkQueue networkQueue;
@@ -43,7 +42,7 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
         final var networkHooksDispatcher = new NetworkHooksDispatcher(networkHooks);
         server = new AsynchronousTcpServer(
                 new AsyncTcpNetworkEngine(networkConfiguration),
-                new ServerInternalsConfiguration(NETWORK_BUFFER_SIZE),
+                ServerInternalsConfiguration.defaultConfiguration(),
                 networkClientRepository,
                 networkQueue,
                 clientQueues,

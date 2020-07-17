@@ -13,7 +13,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
-        <org.apache.logging.log4j-version>2.11.2</org.apache.logging.log4j-version>
+        <org.apache.logging.log4j-version>2.13.3</org.apache.logging.log4j-version>
     </properties>
 
     <dependencies>

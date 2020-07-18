@@ -74,5 +74,6 @@
         <module>fiber-utils</module>
         <module>fiber-event</module>
         <module>fiber-examples</module>
+        <module>fiber-debug</module>
     </modules>
 </project>

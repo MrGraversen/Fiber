@@ -75,8 +75,8 @@ public class AsyncEventDrivenTcpPlatform implements IPlatform<ITcpNetworkClient>
     }
 
     @Override
-    public <T> void registerDecoder(IDecoder<T> codec, IReceiver<T> receiver) {
-        eventBus.registerEventListener(NetworkReadEvent.class, decodeNetworkMessage(codec, receiver));
+    public <T> void registerDecoder(IDecoder<T> decoder, IReceiver<T> receiver) {
+        eventBus.registerEventListener(NetworkReadEvent.class, decodeNetworkMessage(decoder, receiver));
     }
 
     @Override

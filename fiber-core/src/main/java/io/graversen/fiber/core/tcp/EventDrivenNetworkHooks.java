@@ -2,6 +2,7 @@ package io.graversen.fiber.core.tcp;
 
 import io.graversen.fiber.core.hooks.*;
 import io.graversen.fiber.core.tcp.events.ClientConnectedEvent;
+import io.graversen.fiber.core.tcp.events.ClientDisconnectedEvent;
 import io.graversen.fiber.core.tcp.events.NetworkReadEvent;
 import io.graversen.fiber.core.tcp.events.NetworkWriteEvent;
 import io.graversen.fiber.event.bus.IEventBus;
@@ -36,7 +37,7 @@ public class EventDrivenNetworkHooks implements INetworkHooks<ITcpNetworkClient>
 
     @Override
     public void onClientDisconnected(ClientDisconnected<ITcpNetworkClient> clientDisconnected) {
-        final var event = new ClientConnectedEvent(clientDisconnected.getClient());
+        final var event = new ClientDisconnectedEvent(clientDisconnected.getClient(), clientDisconnected.getReason());
         eventBus.emitEvent(event);
     }
 }

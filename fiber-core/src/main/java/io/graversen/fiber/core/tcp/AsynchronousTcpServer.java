@@ -109,7 +109,7 @@ public class AsynchronousTcpServer implements IServer<ITcpNetworkClient> {
                 networkClient.close();
                 clientQueues.remove(client);
                 networkClientRepository.removeClient(networkClient);
-                networkHooksDispatcher.enqueue(new ClientDisconnected<>(client));
+                networkHooksDispatcher.enqueue(new ClientDisconnected<>(client, reason));
             });
         } catch (Exception e) {
             // Nothing useful to do here

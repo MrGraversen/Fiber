@@ -200,11 +200,13 @@ public class DefaultEventBus implements IEventBus {
         @Override
         public void run() {
             try {
+                boolean isDrained = false;
                 while (!Thread.currentThread().isInterrupted() && active.get()) {
                     if (!pause.get()) {
                         for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet()) {
                             final var eventQueue = eventQueueStore.computeIfAbsent(eventClass, e -> new ConcurrentLinkedQueue<>());
                             final IEvent event = eventQueue.poll();
+                            isDrained = isDrained || eventQueue.size() == 0;
 
                             if (event != null) {
                                 event.propagate();
@@ -214,8 +216,10 @@ public class DefaultEventBus implements IEventBus {
                         }
                     }
 
-                    synchronized (LOCK) {
-                        LOCK.wait(1000);
+                    if (isDrained) {
+                        synchronized (LOCK) {
+                            LOCK.wait(1000);
+                        }
                     }
                 }
             } catch (Exception e) {

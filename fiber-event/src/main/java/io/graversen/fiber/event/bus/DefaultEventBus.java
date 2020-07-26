@@ -100,12 +100,17 @@ public class DefaultEventBus implements IEventBus {
         int propagator = eventPropagatorRoundRobin.incrementAndGet();
         if (propagator > cachedThreadPoolSize) {
             propagator = 1;
-            eventPropagatorRoundRobin.getAndSet(1);
+            eventPropagatorRoundRobin.set(propagator);
         }
 
         final EventPropagator nextEventPropagator = eventPropagatorStore.get(propagator);
-        synchronized (nextEventPropagator.LOCK) {
-            nextEventPropagator.LOCK.notify();
+        hintEventPropagator(nextEventPropagator);
+    }
+
+    private void hintEventPropagator(EventPropagator eventPropagator) {
+        synchronized (eventPropagator.LOCK) {
+            eventPropagator.isNotified.set(true);
+            eventPropagator.LOCK.notify();
         }
     }
 
@@ -144,6 +149,7 @@ public class DefaultEventBus implements IEventBus {
     @Override
     public void resume() {
         pause.set(false);
+        hintNextEventPropagator();
     }
 
     @Override
@@ -177,11 +183,7 @@ public class DefaultEventBus implements IEventBus {
                 threadPoolExecutor.shutdownNow();
             }
 
-            eventPropagatorStore.forEach((i, eventPropagator) -> {
-                synchronized (eventPropagator.LOCK) {
-                    eventPropagator.LOCK.notify();
-                }
-            });
+            eventPropagatorStore.forEach((i, eventPropagator) -> hintEventPropagator(eventPropagator));
         }
     }
 
@@ -196,30 +198,36 @@ public class DefaultEventBus implements IEventBus {
 
     class EventPropagator implements Runnable {
         final Object LOCK = new Object();
+        final AtomicBoolean isNotified = new AtomicBoolean(false);
 
         @Override
         public void run() {
             try {
-                boolean isDrained = false;
                 while (!Thread.currentThread().isInterrupted() && active.get()) {
                     if (!pause.get()) {
-                        for (final Class<? extends IEvent> eventClass : eventListenerStore.keySet()) {
-                            final var eventQueue = eventQueueStore.computeIfAbsent(eventClass, e -> new ConcurrentLinkedQueue<>());
-                            final IEvent event = eventQueue.poll();
-                            isDrained = isDrained || eventQueue.size() == 0;
+                        boolean isDrained = false;
+                        while (!isDrained) {
+                            for (Class<? extends IEvent> eventClass : eventListenerStore.keySet()) {
+                                final var eventQueue =
+                                        eventQueueStore.computeIfAbsent(eventClass, e -> new ConcurrentLinkedQueue<>());
 
-                            if (event != null) {
-                                event.propagate();
-                                eventListenerStore.get(eventClass).forEach(propagateEvent(event));
-                                event.finish();
+                                final IEvent event = eventQueue.poll();
+                                isDrained = isDrained || eventQueue.isEmpty();
+
+                                if (event != null) {
+                                    event.propagate();
+                                    eventListenerStore.get(eventClass).forEach(propagateEvent(event));
+                                    event.finish();
+                                }
                             }
                         }
                     }
 
-                    if (isDrained) {
-                        synchronized (LOCK) {
-                            LOCK.wait(1000);
+                    synchronized (LOCK) {
+                        if (!isNotified.get()) {
+                            LOCK.wait();
                         }
+                        isNotified.set(false);
                     }
                 }
             } catch (Exception e) {
